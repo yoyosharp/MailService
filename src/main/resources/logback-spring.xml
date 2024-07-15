@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Define the pattern for log messages -->
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"/>
+
+    <!-- Console appender for logging to the console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appender for console log -->
+    <appender name="CONSOLE_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/console.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>logs/console.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!--  File appender for Security log  -->
+    <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/security.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>logs/security.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!--    &lt;!&ndash; File appender for APIKeyController &ndash;&gt;-->
+    <!--    <appender name="APIKEY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+    <!--        <file>logs/access.log</file>-->
+    <!--        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">-->
+    <!--            &lt;!&ndash; daily rollover &ndash;&gt;-->
+    <!--            <fileNamePattern>logs/access.%d{yyyy-MM-dd}.log</fileNamePattern>-->
+    <!--            &lt;!&ndash; keep 30 days' worth of history &ndash;&gt;-->
+    <!--            <maxHistory>30</maxHistory>-->
+    <!--        </rollingPolicy>-->
+    <!--        <encoder>-->
+    <!--            <pattern>${LOG_PATTERN}</pattern>-->
+    <!--        </encoder>-->
+    <!--    </appender>-->
+
+    <!--    &lt;!&ndash; File appender for SecurityConfig &ndash;&gt;-->
+    <!--    <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+    <!--        <file>logs/security-config.log</file>-->
+    <!--        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">-->
+    <!--            &lt;!&ndash; daily rollover &ndash;&gt;-->
+    <!--            <fileNamePattern>logs/security-config.%d{yyyy-MM-dd}.log</fileNamePattern>-->
+    <!--            &lt;!&ndash; keep 30 days' worth of history &ndash;&gt;-->
+    <!--            <maxHistory>30</maxHistory>-->
+    <!--        </rollingPolicy>-->
+    <!--        <encoder>-->
+    <!--            <pattern>${LOG_PATTERN}</pattern>-->
+    <!--        </encoder>-->
+    <!--    </appender>-->
+
+    <!-- Root logger configuration -->
+    <root level="info">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="CONSOLE_FILE"/>
+    </root>
+
+    <logger name="org.springframework.security" level="trace" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SECURITY_FILE"/>
+    </logger>
+
+    <!--    &lt;!&ndash; Logger for APIKeyController &ndash;&gt;-->
+    <!--    <logger name="com.app.MailService.Controller.APIKeyController" level="info" additivity="false">-->
+    <!--        <appender-ref ref="APIKEY_FILE"/>-->
+    <!--    </logger>-->
+
+    <!-- Logger for APIKeyFilter -->
+    <!--    <logger name="com.app.MailService.Config.APIKeyFilter" level="info" additivity="false">-->
+    <!--        <appender-ref ref="APIKEY_FILE"/>-->
+    <!--    </logger>-->
+
+</configuration>

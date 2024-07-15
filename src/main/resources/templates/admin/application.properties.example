@@ -1,0 +1,33 @@
+# Application properties
+spring.application.name=MailService
+# Datasource properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/MailService
+spring.datasource.username=
+spring.datasource.password=
+spring.datasource.driver-class-name=org.postgresql.Driver
+# JPA properties
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+# AES properties
+aes.key=
+aes.iv=
+# Hashing properties
+hashing.key=
+hashing.iv=
+# Security
+logging.level.org.springframework.security=INFO
+#RabbitMQ
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=
+spring.rabbitmq.password=
+spring.rabbitmq.virtual-host=/
+spring.rabbitmq.exchange.topic=amq.topic
+spring.rabbitmq.exchange.direct=direct
+spring.rabbitmq.exchange.fanout=fanout
+spring.rabbitmq.exchange.headers=headers
+spring.rabbitmq.queue.demoqueue=demo_queue
+#ZeptoMail
+zeptoMail.url=https://api.zeptomail.com/v1.1/email
+zeptoMail.token=
+
+
