@@ -10,12 +10,12 @@ import lombok.Setter;
 import java.sql.Timestamp;
 
 @Entity
-@Table(name = "api_key")
+@Table(name = "clients")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Client extends DBRecord {
+public class Client {
 
     public static final String STATUS_ACTIVE = "active";
     public static final String STATUS_INACTIVE = "inactive";

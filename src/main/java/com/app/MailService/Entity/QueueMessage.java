@@ -5,12 +5,17 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.sql.Timestamp;
 import java.util.Map;
 import java.util.UUID;
 
 @Entity
 @Table(name = "queue_messages")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -46,6 +51,14 @@ public class QueueMessage {
 
     @Column(name = "email_sent")
     private boolean emailSent;
+
+    @CreatedDate
+    @Column(name = "created_at")
+    private Timestamp createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Timestamp updatedAt;
 
     public QueueMessage(Map<String, String> data) {
         this.trackingId = UUID.randomUUID().toString();

@@ -4,6 +4,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 public class AESHelper {
@@ -16,7 +17,7 @@ public class AESHelper {
     private static String encrypt(String plainText, SecretKey key, IvParameterSpec iv) throws Exception {
         Cipher cipher = Cipher.getInstance(AES_CIPHER_ALGORITHM);
         cipher.init(Cipher.ENCRYPT_MODE, key, iv);
-        byte[] cipherText = cipher.doFinal(plainText.getBytes());
+        byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
         return Base64.getEncoder().encodeToString(cipherText);
     }
 
@@ -28,8 +29,9 @@ public class AESHelper {
     private static String decrypt(String cipherText, SecretKey key, IvParameterSpec iv) throws Exception {
         Cipher cipher = Cipher.getInstance(AES_CIPHER_ALGORITHM);
         cipher.init(Cipher.DECRYPT_MODE, key, iv);
-        byte[] plainTextBytes = cipher.doFinal(cipherText.getBytes());
-        return Base64.getEncoder().encodeToString(plainTextBytes);
+        byte[] decodedCipherText = Base64.getDecoder().decode(cipherText);
+        byte[] plainTextBytes = cipher.doFinal(decodedCipherText);
+        return new String(plainTextBytes, StandardCharsets.UTF_8);
     }
 
     public static String decrypt(String cipherText, String key, String iv) throws Exception {
@@ -41,7 +43,7 @@ public class AESHelper {
         if (key.length() != KEY_LENGTH) {
             throw new IllegalArgumentException("Key length must be 32 characters (256 bits).");
         }
-        return new SecretKeySpec(key.getBytes(), AES);
+        return new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), AES);
     }
 
     // Method to convert a string to an IV
@@ -49,6 +51,6 @@ public class AESHelper {
         if (iv.length() != IV_LENGTH) {
             throw new IllegalArgumentException("IV length must be 16 characters (128 bits).");
         }
-        return new IvParameterSpec(iv.getBytes());
+        return new IvParameterSpec(iv.getBytes(StandardCharsets.UTF_8));
     }
 }

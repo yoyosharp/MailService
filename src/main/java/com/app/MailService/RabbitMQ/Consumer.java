@@ -63,11 +63,10 @@ public class Consumer {
             String htmlBody = emailTemplate.fillTemplate(data);
 
             boolean result = SendByZeptoMail.singleMailByZeptoMail(zeptoMailUrl, zeptoMailToken, queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
-
             if (result) {
                 queueMessage.setEmailSent(true);
+                queueMessageRepository.save(queueMessage);
             }
-            queueMessageRepository.save(queueMessage);
 
         } catch (Exception e) {
             logger.error("Error while processing message: {}", e.getMessage());

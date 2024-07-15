@@ -3,16 +3,16 @@ package com.app.MailService.Controller;
 import com.app.MailService.Entity.Client;
 import com.app.MailService.Repository.ClientRepository;
 import com.app.MailService.Utilities.AESHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.Timestamp;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -55,5 +55,16 @@ public class AdminController {
 
         Client savedClient = clientRepository.save(client);
         return new ResponseEntity<>(savedClient, HttpStatus.OK);
+    }
+
+    @PostMapping("get-encrypted-content")
+    public ResponseEntity<?> getEncryptedContent(@RequestBody Map<String, String> content) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String strContent = objectMapper.writeValueAsString(content);
+            return new ResponseEntity<>(AESHelper.encrypt(strContent, aesKey, aesIv), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

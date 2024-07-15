@@ -72,11 +72,11 @@ public class APIKeyFilter extends OncePerRequestFilter {
                 return;
             }
         } catch (Exception e) {
-            logger.error("Error while decrypting clientSecret: " + e.getMessage());
+            logger.error("Error while decrypting clientSecret: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error while decrypting clientSecret");
             return;
         }
-        logger.info("Incoming request approved, clientId: " + clientId);
+        logger.info("Incoming request approved, clientId: {}", clientId);
         filterChain.doFilter(request, response);
     }
 
@@ -85,7 +85,7 @@ public class APIKeyFilter extends OncePerRequestFilter {
         try {
             return AESHelper.encrypt(rawText, hashingKey, hashingIv).equals(client.getHashToken());
         } catch (Exception e) {
-            logger.error("Error while hashing client " + client.getClientId() + ": " + e.getMessage());
+            logger.error("Error while hashing client {}: {}", client.getClientId(), e.getMessage());
             return false;
         }
     }

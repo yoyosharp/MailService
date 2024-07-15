@@ -61,6 +61,7 @@ public class SendMailService {
             String strMessage = objectMapper.writeValueAsString(queueMessage);
             publisher.sendMessage(routingKey, strMessage);
         } catch (Exception e) {
+            e.printStackTrace();
             logger.error("Error while enqueueing message: {}", e.getMessage());
             throw new RuntimeException("Error while processing message");
         }
