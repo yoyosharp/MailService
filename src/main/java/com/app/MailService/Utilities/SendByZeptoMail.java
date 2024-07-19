@@ -18,7 +18,7 @@ public class SendByZeptoMail {
 
     private static final Logger log = LoggerFactory.getLogger(SendByZeptoMail.class);
 
-    public static boolean singleMailByZeptoMail(String zeptoMailUrl, String zeptoMailToken, String senderEmail, String senderName, String recipientAddress, String subject, String htmlBody) {
+    public static boolean sendSingleMailByZeptoMail(String zeptoMailUrl, String zeptoMailToken, String senderEmail, String senderName, String recipientAddress, String subject, String htmlBody) {
         From from = new From(senderEmail, senderName);
         List<To> to = new ArrayList<>();
         to.add(new To(new EmailAddress(recipientAddress)));

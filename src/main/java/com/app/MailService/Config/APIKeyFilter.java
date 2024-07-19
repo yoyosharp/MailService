@@ -1,6 +1,7 @@
 package com.app.MailService.Config;
 
 import com.app.MailService.Entity.Client;
+import com.app.MailService.Model.RequestContext;
 import com.app.MailService.Repository.ClientRepository;
 import com.app.MailService.Utilities.AESHelper;
 import jakarta.servlet.FilterChain;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 public class APIKeyFilter extends OncePerRequestFilter {
@@ -76,8 +78,17 @@ public class APIKeyFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error while decrypting clientSecret");
             return;
         }
-        logger.info("Incoming request approved, clientId: {}", clientId);
-        filterChain.doFilter(request, response);
+
+        RequestContext.set("trackingId", UUID.randomUUID().toString());
+        RequestContext.set("clientId", clientId);
+        logger.info("Incoming request approved, context: {}", RequestContext.getCurrentContext());
+
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            RequestContext.clear();
+        }
+
     }
 
     private boolean validate(Client client) {

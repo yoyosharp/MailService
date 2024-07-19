@@ -2,12 +2,11 @@ package com.app.MailService.Model.Request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @AllArgsConstructor
-public class EmailMessageRequest {
-
-    private String requestType;
+@NoArgsConstructor
+public class GenerateOtpRequest {
     private String content;
-    private boolean isEncrypted;
 }

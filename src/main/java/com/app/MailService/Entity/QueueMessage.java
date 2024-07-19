@@ -1,5 +1,6 @@
 package com.app.MailService.Entity;
 
+import com.app.MailService.Model.RequestContext;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,7 +12,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Timestamp;
 import java.util.Map;
-import java.util.UUID;
 
 @Entity
 @Table(name = "queue_messages")
@@ -61,8 +61,8 @@ public class QueueMessage {
     private Timestamp updatedAt;
 
     public QueueMessage(Map<String, String> data) {
-        this.trackingId = UUID.randomUUID().toString();
-        this.clientId = data.get("clientId");
+        this.trackingId = RequestContext.get("trackingId");
+        this.clientId = RequestContext.get("clientId");
         this.fromAddress = data.get("fromAddress");
         this.senderName = data.get("senderName");
         this.toAddress = data.get("toAddress");

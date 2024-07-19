@@ -22,46 +22,41 @@ import java.util.Map;
 public class SendMailService {
 
     private final Publisher publisher;
-    private final String aesKey;
-    private final String aesIv;
     private final QueueMessageRepository queueMessageRepository;
-
     Logger logger = LoggerFactory.getLogger(SendMailController.class);
+    @Value("${aes.key}")
+    private String aesKey;
+    @Value("${aes.iv}")
+    private String aesIv;
 
     @Autowired
     public SendMailService(Publisher publisher,
-                           @Value("${aes.key}") String aesKey,
-                           @Value("${aes.iv}") String aesIv,
                            QueueMessageRepository queueMessageRepository) {
         this.queueMessageRepository = queueMessageRepository;
         this.publisher = publisher;
-        this.aesKey = aesKey;
-        this.aesIv = aesIv;
     }
 
     @Transactional
-    public void enQueue(EmailMessageRequest request) {
+    public String enQueue(EmailMessageRequest request) {
+        System.out.println(request.isEncrypted());
         String routingKey = request.getRequestType();
         String content = request.getContent();
         ObjectMapper objectMapper = new ObjectMapper();
+        if (!RabbitMQConfig.routingKeys.contains(routingKey)) {
+            throw new RuntimeException("Invalid routing key");
+        }
         try {
-            if (!RabbitMQConfig.routingKeys.contains(routingKey)) {
-                throw new RuntimeException("Invalid routing key");
-            }
-
             if (request.isEncrypted()) {
                 content = AESHelper.decrypt(content, aesKey, aesIv);
             }
-
             Map<String, String> sendMailData = objectMapper.readValue(content, new TypeReference<>() {
             });
             QueueMessage queueMessage = new QueueMessage(sendMailData);
             queueMessageRepository.save(queueMessage);
-
             String strMessage = objectMapper.writeValueAsString(queueMessage);
             publisher.sendMessage(routingKey, strMessage);
+            return queueMessage.getTrackingId();
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error("Error while enqueueing message: {}", e.getMessage());
             throw new RuntimeException("Error while processing message");
         }
