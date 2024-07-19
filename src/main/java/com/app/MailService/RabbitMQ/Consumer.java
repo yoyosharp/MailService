@@ -4,6 +4,7 @@ import com.app.MailService.Entity.EmailTemplate;
 import com.app.MailService.Entity.QueueMessage;
 import com.app.MailService.Repository.EmailTemplateRepository;
 import com.app.MailService.Repository.QueueMessageRepository;
+import com.app.MailService.Service.GmailService;
 import com.app.MailService.Utilities.SendByZeptoMail;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,19 +21,26 @@ import java.util.Map;
 public class Consumer {
 
     private static final Logger logger = LoggerFactory.getLogger(Consumer.class);
+    private static final String GMAIL = "Gmail";
+    private static final String ZEPTO_MAIL = "zeptoMail";
     private final QueueMessageRepository queueMessageRepository;
     private final EmailTemplateRepository emailTemplateRepository;
+    private final GmailService gmailService;
     @Value("${zeptoMail.url}")
     private String zeptoMailUrl;
     @Value("${zeptoMail.token}")
     private String zeptoMailToken;
+    @Value("${application.defaultMailClient}")
+    private String defaultClient;
 
     @Autowired
     public Consumer(QueueMessageRepository queueMessageRepository,
-                    EmailTemplateRepository emailTemplateRepository
+                    EmailTemplateRepository emailTemplateRepository,
+                    GmailService gmailService
     ) {
         this.queueMessageRepository = queueMessageRepository;
         this.emailTemplateRepository = emailTemplateRepository;
+        this.gmailService = gmailService;
     }
 
     @RabbitListener(queues = RabbitMQConfig.DEMO_QUEUE)
@@ -62,7 +70,14 @@ public class Consumer {
             }
             String htmlBody = emailTemplate.fillTemplate(data);
 
-            boolean result = SendByZeptoMail.singleMailByZeptoMail(zeptoMailUrl, zeptoMailToken, queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+            boolean result = switch (defaultClient) {
+                case ZEPTO_MAIL ->
+                        SendByZeptoMail.sendSingleMailByZeptoMail(zeptoMailUrl, zeptoMailToken, queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+                case GMAIL ->
+                        gmailService.sendSingleMailByGmail(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+                default -> false;
+            };
+
             if (result) {
                 queueMessage.setEmailSent(true);
                 queueMessageRepository.save(queueMessage);
