@@ -1,7 +1,8 @@
 package com.app.MailService.Controller;
 
 import com.app.MailService.Model.Request.EmailMessageRequest;
-import com.app.MailService.Response.ApiResponse;
+import com.app.MailService.Model.Response.ApiErrorResponse;
+import com.app.MailService.Model.Response.ApiResponse;
 import com.app.MailService.Service.SendMailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,24 +28,24 @@ public class SendMailController {
         this.sendMailService = sendMailService;
     }
 
-    @RequestMapping("/demo")
-    public ResponseEntity<?> demo() {
-        return new ResponseEntity<>("Success", HttpStatus.OK);
-
-    }
-
     @PostMapping("/send-single-mail")
     public ResponseEntity<?> publishMessage(@RequestBody EmailMessageRequest request) {
-        ApiResponse apiResponse = new ApiResponse();
+
         try {
+            ApiResponse apiResponse = new ApiResponse();
             String trackingId = sendMailService.enQueue(request);
-            apiResponse.setTrackingId(trackingId);
-            apiResponse.setUrl("/api/send-mail/send-single-mail");
+            apiResponse.setMessage("Message sent successfully!");
             apiResponse.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
-            apiResponse.setStatus("Success");
+            apiResponse.setStatus(HttpStatus.OK.value());
+            apiResponse.setResult(trackingId);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         } catch (Exception e) {
+            ApiErrorResponse response = new ApiErrorResponse();
+            response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.setError("Internal server error");
+            response.setPath("/api/send-mail/send-single-mail");
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 }

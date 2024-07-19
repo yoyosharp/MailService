@@ -1,4 +1,4 @@
-package com.app.MailService.Response;
+package com.app.MailService.Model.Response;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ApiResponse {
     private String timestamp;
-    private String status;
-    private String trackingId;
-    private String url;
+    private Integer status;
+    private String message;
+    private Object result;
+
 }

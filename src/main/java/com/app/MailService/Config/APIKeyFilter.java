@@ -1,7 +1,7 @@
 package com.app.MailService.Config;
 
 import com.app.MailService.Entity.Client;
-import com.app.MailService.Model.RequestContext;
+import com.app.MailService.Model.DTO.RequestContext;
 import com.app.MailService.Repository.ClientRepository;
 import com.app.MailService.Utilities.AESHelper;
 import jakarta.servlet.FilterChain;

@@ -7,7 +7,6 @@ import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Repository.OtpRepository;
 import com.app.MailService.Utilities.AESHelper;
 import com.app.MailService.Utilities.Constants;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -53,11 +52,11 @@ public class OtpService {
             ObjectMapper objectMapper = new ObjectMapper();
             OtpData data = objectMapper.readValue(content, new TypeReference<>() {
             });
+            Map<String, String> sendInfo = objectMapper.readValue(data.getSendInfo(), new TypeReference<>() {
+            });
 
             Otp otp = new Otp(data, maxRetry, maxResend);
             otp.setExpiringTime(Timestamp.valueOf(otp.getCreatedAt().toLocalDateTime().plusSeconds(expirationTimeInSecond)));
-            Map<String, String> sendInfo = objectMapper.readValue(data.getSendInfo(), new TypeReference<>() {
-            });
             String sendType = sendInfo.get("sendType");
 
             switch (sendType) {
@@ -90,10 +89,11 @@ public class OtpService {
     }
 
     private Map<String, String> proceedOtpByCard(Map<String, String> sendInfo) {
+        //TO DO : implement otp by card
         return null;
     }
 
-    private void sendOtpBySms(Otp otp, Map<String, String> sendInfo) throws JsonProcessingException {
+    private void sendOtpBySms(Otp otp, Map<String, String> sendInfo) {
 
     }
 
@@ -117,12 +117,10 @@ public class OtpService {
             content.put("data", strData);
 
             String strContent = objectMapper.writeValueAsString(content);
-            EmailMessageRequest request = new EmailMessageRequest("demo", strContent, false);
+            EmailMessageRequest request = new EmailMessageRequest(otp.getType(), strContent, false);
             this.sendMailService.enQueue(request);
         } catch (Exception e) {
             logger.error("Error while sending OTP: {}", e.getMessage());
         }
-
     }
-
 }

@@ -2,15 +2,14 @@ package com.app.MailService.Model.Response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class ApiErrorResponse {
-    private LocalDateTime timestamp;
-    private int status;
+    private String timestamp;
+    private Integer status;
     private String error;
-    private String message;
     private String path;
 }

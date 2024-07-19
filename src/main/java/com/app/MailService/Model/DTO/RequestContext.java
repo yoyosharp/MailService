@@ -1,4 +1,4 @@
-package com.app.MailService.Model;
+package com.app.MailService.Model.DTO;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,29 +1,37 @@
-package com.app.MailService.Utilities;
+package com.app.MailService.Service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class SendByZeptoMail {
+@Service
+public class ZeptoMailService {
 
-    private static final Logger log = LoggerFactory.getLogger(SendByZeptoMail.class);
+    private static final Logger log = LoggerFactory.getLogger(ZeptoMailService.class);
 
-    public static boolean sendSingleMailByZeptoMail(String zeptoMailUrl, String zeptoMailToken, String senderEmail, String senderName, String recipientAddress, String subject, String htmlBody) {
+    @Value("${zeptoMail.url}")
+    private String zeptoMailUrl;
+    @Value("${zeptoMail.token}")
+    private String zeptoMailToken;
+
+
+    public boolean sendSingleMailByZeptoMail(String senderEmail, String senderName, String recipientAddress, String subject, String htmlBody) {
         From from = new From(senderEmail, senderName);
         List<To> to = new ArrayList<>();
         to.add(new To(new EmailAddress(recipientAddress)));
 
-        RestTemplate restTemplate = new RestTemplate();
         ZeptoMailRequest request = new ZeptoMailRequest(from, to, htmlBody, subject);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Accept", "application/json");
@@ -32,12 +40,14 @@ public class SendByZeptoMail {
 
         try {
             HttpEntity<ZeptoMailRequest> entity = new HttpEntity<>(request, headers);
-            ResponseEntity<String> response = restTemplate.exchange(zeptoMailUrl, HttpMethod.POST, entity, String.class);
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<?> response = restTemplate.exchange(zeptoMailUrl, HttpMethod.POST, entity, Object.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("Email sent successfully by ZeptoMail, recipient: {}", recipientAddress);
                 return true;
             } else {
-                log.error("Error while sending email: {}", response.getBody());
+                log.error("The mail service returned an error {}", response.getBody());
                 return false;
             }
         } catch (Exception e) {

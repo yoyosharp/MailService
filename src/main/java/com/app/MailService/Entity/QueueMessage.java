@@ -1,6 +1,6 @@
 package com.app.MailService.Entity;
 
-import com.app.MailService.Model.RequestContext;
+import com.app.MailService.Model.DTO.RequestContext;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

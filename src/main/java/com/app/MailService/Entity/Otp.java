@@ -1,7 +1,7 @@
 package com.app.MailService.Entity;
 
 import com.app.MailService.Model.DTO.OtpData;
-import com.app.MailService.Model.RequestContext;
+import com.app.MailService.Model.DTO.RequestContext;
 import com.app.MailService.Utilities.Constants;
 import jakarta.persistence.*;
 import lombok.Getter;

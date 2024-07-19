@@ -5,8 +5,8 @@ import com.app.MailService.Entity.QueueMessage;
 import com.app.MailService.Repository.EmailTemplateRepository;
 import com.app.MailService.Repository.QueueMessageRepository;
 import com.app.MailService.Service.GmailService;
+import com.app.MailService.Service.ZeptoMailService;
 import com.app.MailService.Utilities.Constants;
-import com.app.MailService.Utilities.SendByZeptoMail;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -24,32 +24,36 @@ public class Consumer {
     private static final Logger logger = LoggerFactory.getLogger(Consumer.class);
     private final QueueMessageRepository queueMessageRepository;
     private final EmailTemplateRepository emailTemplateRepository;
+    private final ZeptoMailService zeptoMailService;
     private final GmailService gmailService;
-    @Value("${zeptoMail.url}")
-    private String zeptoMailUrl;
-    @Value("${zeptoMail.token}")
-    private String zeptoMailToken;
     @Value("${application.defaultMailClient}")
-    private String defaultClient;
+    private String defaultProvider;
 
     @Autowired
     public Consumer(QueueMessageRepository queueMessageRepository,
                     EmailTemplateRepository emailTemplateRepository,
-                    GmailService gmailService
+                    GmailService gmailService,
+                    ZeptoMailService zeptoMailService
     ) {
         this.queueMessageRepository = queueMessageRepository;
         this.emailTemplateRepository = emailTemplateRepository;
         this.gmailService = gmailService;
+        this.zeptoMailService = zeptoMailService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.DEMO_QUEUE)
-    public void receiveDemoMessage(String message) {
-        handle(message, RabbitMQConfig.DEMO_QUEUE);
+    @RabbitListener(queues = Constants.REGISTER_OTP_QUEUE)
+    public void receiveRegisterMessage(String message) {
+        handle(message, Constants.REGISTER_OTP_QUEUE);
     }
 
-    @RabbitListener(queues = RabbitMQConfig.ANOTHER_QUEUE)
-    public void receiveAnotherDemoQueueMessage(String message) {
-        handle(message, RabbitMQConfig.ANOTHER_QUEUE);
+    @RabbitListener(queues = Constants.LOGIN_OTP_QUEUE)
+    public void receiveLoginMessage(String message) {
+        handle(message, Constants.LOGIN_OTP_QUEUE);
+    }
+
+    @RabbitListener(queues = Constants.FORGOT_PASSWORD_OTP_QUEUE)
+    public void receiveForgotPasswordMessage(String message) {
+        handle(message, Constants.FORGOT_PASSWORD_OTP_QUEUE);
     }
 
     private void handle(String message, String queueName) {
@@ -60,32 +64,38 @@ public class Consumer {
             Map<String, String> data = objectMapper.readValue(queueMessage.getData(), new TypeReference<>() {
             });
 
-            EmailTemplate emailTemplate = emailTemplateRepository.findByName(queueMessage.getEmailTemplate());
-            if (emailTemplate == null) {
-                throw new RuntimeException("Email template not found, requested template: " + queueMessage.getEmailTemplate());
-            }
-            if (!emailTemplate.isActive()) {
-                throw new RuntimeException("Email template is not active");
-            }
-            String htmlBody = emailTemplate.fillTemplate(data);
+            String htmlBody = createHtmlBody(queueMessage.getEmailTemplate(), data);
 
-            boolean result = switch (defaultClient) {
-                case Constants.ZEPTO_MAIL ->
-                        SendByZeptoMail.sendSingleMailByZeptoMail(zeptoMailUrl, zeptoMailToken, queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
-                case Constants.GMAIL_API ->
-                        gmailService.sendMailByGmailApi(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
-                case Constants.GMAIL_BY_JAVA_MAILER ->
-                        gmailService.sendSingleMailByJavaMailer(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
-                default -> false;
-            };
-
+            boolean result = sendMessage(queueMessage, htmlBody);
             if (result) {
                 queueMessage.setEmailSent(true);
                 queueMessageRepository.save(queueMessage);
             }
-
         } catch (Exception e) {
             logger.error("Error while processing message: {}", e.getMessage());
         }
+    }
+
+    private String createHtmlBody(String templateName, Map<String, String> data) {
+        EmailTemplate emailTemplate = emailTemplateRepository.findByName(templateName);
+        if (emailTemplate == null) {
+            throw new RuntimeException("Email template not found, requested template: " + templateName);
+        }
+        if (!emailTemplate.isActive()) {
+            throw new RuntimeException("Template " + templateName + " is not active");
+        }
+        return emailTemplate.fillTemplate(data);
+    }
+
+    private boolean sendMessage(QueueMessage queueMessage, String htmlBody) {
+        return switch (defaultProvider) {
+            case Constants.ZEPTO_MAIL ->
+                    zeptoMailService.sendSingleMailByZeptoMail(queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+            case Constants.GMAIL_API ->
+                    gmailService.sendMailByGmailApi(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+            case Constants.GMAIL_BY_JAVA_MAILER ->
+                    gmailService.sendSingleMailByJavaMailer(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+            default -> false;
+        };
     }
 }

@@ -4,9 +4,9 @@ import com.app.MailService.Controller.SendMailController;
 import com.app.MailService.Entity.QueueMessage;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.RabbitMQ.Publisher;
-import com.app.MailService.RabbitMQ.RabbitMQConfig;
 import com.app.MailService.Repository.QueueMessageRepository;
 import com.app.MailService.Utilities.AESHelper;
+import com.app.MailService.Utilities.Constants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -38,23 +38,23 @@ public class SendMailService {
 
     @Transactional
     public String enQueue(EmailMessageRequest request) {
-        System.out.println(request.isEncrypted());
         String routingKey = request.getRequestType();
-        String content = request.getContent();
-        ObjectMapper objectMapper = new ObjectMapper();
-        if (!RabbitMQConfig.routingKeys.contains(routingKey)) {
-            throw new RuntimeException("Invalid routing key");
+        if (!Constants.routingKeys.contains(routingKey)) {
+            throw new RuntimeException("Invalid request type");
         }
         try {
-            if (request.isEncrypted()) {
-                content = AESHelper.decrypt(content, aesKey, aesIv);
-            }
+            String content = request.isEncrypted() ? AESHelper.decrypt(request.getContent(), aesKey, aesIv) : request.getContent();
+
+            ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> sendMailData = objectMapper.readValue(content, new TypeReference<>() {
             });
+
             QueueMessage queueMessage = new QueueMessage(sendMailData);
             queueMessageRepository.save(queueMessage);
+
             String strMessage = objectMapper.writeValueAsString(queueMessage);
             publisher.sendMessage(routingKey, strMessage);
+
             return queueMessage.getTrackingId();
         } catch (Exception e) {
             logger.error("Error while enqueueing message: {}", e.getMessage());

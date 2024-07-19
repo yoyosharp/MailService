@@ -107,7 +107,7 @@ public class GmailService {
             logger.info("Message id: {}", message.getId());
             return true;
         } catch (Exception e) {
-            logger.error("Error while sending email: {}", e.getMessage());
+            logger.error("Error while sending email with Gmail Api: {}", e.getMessage());
             return false;
         }
     }
@@ -126,7 +126,7 @@ public class GmailService {
             mailSender.send(message.getMimeMessage());
             return true;
         } catch (Exception e) {
-            logger.error("Error while sending email: {}", e.getMessage());
+            logger.error("Error while sending email wih Java Mailer: {}", e.getMessage());
             return false;
         }
     }
