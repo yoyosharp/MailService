@@ -38,6 +38,7 @@ public class SendMailService {
 
     @Transactional
     public String enQueue(EmailMessageRequest request) {
+        System.out.println(request.isEncrypted());
         String routingKey = request.getRequestType();
         String content = request.getContent();
         ObjectMapper objectMapper = new ObjectMapper();

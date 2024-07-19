@@ -62,7 +62,7 @@ public class Consumer {
 
             EmailTemplate emailTemplate = emailTemplateRepository.findByName(queueMessage.getEmailTemplate());
             if (emailTemplate == null) {
-                throw new RuntimeException("Email template not found");
+                throw new RuntimeException("Email template not found, requested template: " + queueMessage.getEmailTemplate());
             }
             if (!emailTemplate.isActive()) {
                 throw new RuntimeException("Email template is not active");

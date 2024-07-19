@@ -1,29 +1,15 @@
 package com.app.MailService.Model.DTO;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
+@Data
 public class OtpData {
-    @JsonProperty("clientId")
-    private String clientId;
-    @JsonProperty("otpType")
     private String otpType;
-    @JsonProperty("sendInfo")
-    private SendInfo sendInfo;
-
-    @AllArgsConstructor
-    @Getter
-    @Setter
-    public static class SendInfo {
-        @JsonProperty("sendType")
-        private String sendType;
-        @JsonProperty("target")
-        private String target;
-    }
-
-
+    private String sendInfo;
 }

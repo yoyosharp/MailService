@@ -32,4 +32,9 @@ public class Constants {
     public static final String GMAIL_BY_JAVA_MAILER = "GmailByJavaMailer";
     public static final String GMAIL_API = "GmailApi";
     public static final String ZEPTO_MAIL = "ZeptoMail";
+
+    public static final String OTP_SEND_EMAIL_FROM_ADDRESS = "noreply@example.com";
+    public static final String OTP_SEND_EMAIL_SENDER_NAME = "System Notification";
+    public static final String OTP_SEND_EMAIL_SUBJECT = "Mã OTP đăng ký tài khoản";
 }
+

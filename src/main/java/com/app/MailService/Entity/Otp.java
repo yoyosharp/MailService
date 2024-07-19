@@ -1,21 +1,24 @@
 package com.app.MailService.Entity;
 
+import com.app.MailService.Model.DTO.OtpData;
+import com.app.MailService.Model.RequestContext;
 import com.app.MailService.Utilities.Constants;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 @Entity
 @Table(name = "otp")
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 public class Otp {
     @Id
@@ -62,17 +65,17 @@ public class Otp {
     @Column(name = "updated_at")
     private Timestamp updatedAt;
 
-    public Otp(long expirationTimeInSecond, int maxRetry, int maxResend) {
+    public Otp(OtpData data, int maxRetry, int maxResend) {
         this();
-        this.setTrackingId(UUID.randomUUID().toString());
+        this.setClientId(RequestContext.get("clientId"));
+        this.setType(data.getOtpType());
+        this.setSendInfo(data.getSendInfo());
+        this.setTrackingId(RequestContext.get("trackingId"));
         this.setStatus(Constants.OTP_STATUS_PENDING);
         this.setMaxRetry(maxRetry);
         this.setMaxResend(maxResend);
         this.setRetryCount(0);
         this.setResendCount(0);
-
-        this.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-        this.setExpiringTime(new Timestamp(System.currentTimeMillis() + (expirationTimeInSecond * 1000)));
-
+        this.createdAt = new Timestamp(System.currentTimeMillis());
     }
 }

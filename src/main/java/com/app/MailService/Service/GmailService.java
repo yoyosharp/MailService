@@ -1,5 +1,6 @@
 package com.app.MailService.Service;
 
+import com.app.MailService.Utilities.Constants;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
@@ -79,7 +80,7 @@ public class GmailService {
         MimeMessage email = new MimeMessage(session);
         MimeMessageHelper helper = new MimeMessageHelper(email, true, "UTF-8");
 
-        helper.setFrom(new InternetAddress("yoyosharp89@gmail.com", "System Notification", "UTF-8"));
+        helper.setFrom(new InternetAddress(Constants.OTP_SEND_EMAIL_FROM_ADDRESS, Constants.OTP_SEND_EMAIL_SENDER_NAME, "UTF-8"));
         helper.setTo(toEmailAddress);
         helper.setSubject(subject);
         helper.setText(bodyText, true);
@@ -117,7 +118,7 @@ public class GmailService {
             MimeMailMessage message = new MimeMailMessage(mailSender.createMimeMessage());
             MimeMessageHelper helper = new MimeMessageHelper(message.getMimeMessage(), true);
 
-            helper.setFrom("noreply@demo.com", "System Notification");
+            helper.setFrom(Constants.OTP_SEND_EMAIL_FROM_ADDRESS, Constants.OTP_SEND_EMAIL_SENDER_NAME);
             helper.setTo(toAddress);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
