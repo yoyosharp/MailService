@@ -40,3 +40,4 @@ logs
 
 ### Google API ###
 client_secret.apps.googleusercontent.com.json
+tokens/

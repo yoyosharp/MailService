@@ -5,6 +5,7 @@ import com.app.MailService.Entity.QueueMessage;
 import com.app.MailService.Repository.EmailTemplateRepository;
 import com.app.MailService.Repository.QueueMessageRepository;
 import com.app.MailService.Service.GmailService;
+import com.app.MailService.Utilities.Constants;
 import com.app.MailService.Utilities.SendByZeptoMail;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,8 +22,6 @@ import java.util.Map;
 public class Consumer {
 
     private static final Logger logger = LoggerFactory.getLogger(Consumer.class);
-    private static final String GMAIL = "Gmail";
-    private static final String ZEPTO_MAIL = "zeptoMail";
     private final QueueMessageRepository queueMessageRepository;
     private final EmailTemplateRepository emailTemplateRepository;
     private final GmailService gmailService;
@@ -71,10 +70,12 @@ public class Consumer {
             String htmlBody = emailTemplate.fillTemplate(data);
 
             boolean result = switch (defaultClient) {
-                case ZEPTO_MAIL ->
+                case Constants.ZEPTO_MAIL ->
                         SendByZeptoMail.sendSingleMailByZeptoMail(zeptoMailUrl, zeptoMailToken, queueMessage.getFromAddress(), queueMessage.getSenderName(), queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
-                case GMAIL ->
-                        gmailService.sendSingleMailByGmail(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+                case Constants.GMAIL_API ->
+                        gmailService.sendMailByGmailApi(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
+                case Constants.GMAIL_BY_JAVA_MAILER ->
+                        gmailService.sendSingleMailByJavaMailer(queueMessage.getToAddress(), queueMessage.getSubject(), htmlBody);
                 default -> false;
             };
 

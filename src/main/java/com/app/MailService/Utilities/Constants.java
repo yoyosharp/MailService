@@ -28,4 +28,8 @@ public class Constants {
             OTP_TYPE_FORGOT_PASSWORD,
             OTP_TYPE_SHOP_PAYMENT
     );
+
+    public static final String GMAIL_BY_JAVA_MAILER = "GmailByJavaMailer";
+    public static final String GMAIL_API = "GmailApi";
+    public static final String ZEPTO_MAIL = "ZeptoMail";
 }
