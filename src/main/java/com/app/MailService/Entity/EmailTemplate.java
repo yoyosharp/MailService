@@ -35,22 +35,10 @@ public class EmailTemplate {
     @Column(name = "is_active")
     private boolean isActive;
 
-    /**
-     * Retrieves the list of variable fields from the entity.
-     * variableFields is a comma-separated list of field names
-     *
-     * @return list of variable fields
-     */
-    public List<String> getVariableFieldList() {
+    private List<String> getVariableFieldList() {
         return List.of(variableFields.split(","));
     }
 
-    /**
-     * Fills the template with the provided variables.
-     *
-     * @param variables a map of key-value pairs representing the variables to replace in the template
-     * @return the filled template with replaced variables
-     */
     public String fillTemplate(Map<String, String> variables) {
         List<String> variableFields = getVariableFieldList();
         String filledTemplate = template;

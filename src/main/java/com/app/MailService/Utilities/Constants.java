@@ -6,7 +6,7 @@ public class Constants {
 
     public static final String OTP_STATUS_PENDING = "pending";
     public static final String OTP_STATUS_EXPIRED = "expired";
-    public static final String OTP_STATUS_VALIDATED = "validated";
+    public static final String OTP_STATUS_VERIFIED = "verified";
     public static final String OTP_STATUS_REJECTED = "rejected";
 
     public static final String OTP_SEND_TYPE_EMAIL = "email";

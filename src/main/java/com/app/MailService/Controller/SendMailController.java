@@ -16,8 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Timestamp;
 
+import static com.app.MailService.Utilities.EndPointsConstants.API_V1_SEND_MAIL;
+import static com.app.MailService.Utilities.EndPointsConstants.SEND_MAIL_SINGLE;
+
 @RestController
-@RequestMapping("/api/send-mail")
+@RequestMapping(API_V1_SEND_MAIL)
 public class SendMailController {
 
     private final SendMailService sendMailService;
@@ -28,7 +31,7 @@ public class SendMailController {
         this.sendMailService = sendMailService;
     }
 
-    @PostMapping("/send-single-mail")
+    @PostMapping(SEND_MAIL_SINGLE)
     public ResponseEntity<?> publishMessage(@RequestBody EmailMessageRequest request) {
 
         try {

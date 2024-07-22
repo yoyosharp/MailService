@@ -9,8 +9,7 @@ import com.app.MailService.Service.ZeptoMailService;
 import com.app.MailService.Utilities.Constants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +18,9 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class Consumer {
 
-    private static final Logger logger = LoggerFactory.getLogger(Consumer.class);
     private final QueueMessageRepository queueMessageRepository;
     private final EmailTemplateRepository emailTemplateRepository;
     private final ZeptoMailService zeptoMailService;
@@ -57,7 +56,7 @@ public class Consumer {
     }
 
     private void handle(String message, String queueName) {
-        logger.info("Received message from {}: {}", queueName, message);
+        log.info("Received message from {}: {}", queueName, message);
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             QueueMessage queueMessage = objectMapper.readValue(message, QueueMessage.class);
@@ -72,7 +71,7 @@ public class Consumer {
                 queueMessageRepository.save(queueMessage);
             }
         } catch (Exception e) {
-            logger.error("Error while processing message: {}", e.getMessage());
+            log.error("Error while processing message: {}", e.getMessage());
         }
     }
 

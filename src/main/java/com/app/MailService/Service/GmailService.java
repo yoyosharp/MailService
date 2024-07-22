@@ -17,9 +17,8 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -36,8 +35,8 @@ import java.util.List;
 import java.util.Properties;
 
 @Service
+@Slf4j
 public class GmailService {
-    private static final Logger logger = LoggerFactory.getLogger(GmailService.class);
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final List<String> SCOPES = Collections.singletonList(GmailScopes.GMAIL_SEND);
     private static final String APPLICATION_NAME = "MailService";
@@ -104,10 +103,10 @@ public class GmailService {
             MimeMessage email = createEmail(toAddress, subject, htmlBody);
             Message message = createMessageWithEmail(email);
             message = gmail.users().messages().send("me", message).execute();
-            logger.info("Message id: {}", message.getId());
+            log.info("Message id: {}", message.getId());
             return true;
         } catch (Exception e) {
-            logger.error("Error while sending email with Gmail Api: {}", e.getMessage());
+            log.error("Error while sending email with Gmail Api: {}", e.getMessage());
             return false;
         }
     }
@@ -126,7 +125,7 @@ public class GmailService {
             mailSender.send(message.getMimeMessage());
             return true;
         } catch (Exception e) {
-            logger.error("Error while sending email wih Java Mailer: {}", e.getMessage());
+            log.error("Error while sending email wih Java Mailer: {}", e.getMessage());
             return false;
         }
     }
