@@ -7,9 +7,9 @@ import com.app.MailService.Model.DTO.VerifyOtpDTO;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Model.Request.VerifyOtpRequest;
-import com.app.MailService.Repository.OtpRepository;
 import com.app.MailService.Utilities.AESHelper;
 import com.app.MailService.Utilities.Constants;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -23,13 +23,13 @@ import org.springframework.web.context.request.RequestContextHolder;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
 public class OtpService {
 
-    private final OtpRepository otpRepository;
+    private final OtpCacheService otpCacheService;
     private final SendMailService sendMailService;
     @Value("${aes.key}")
     private String aesKey;
@@ -43,53 +43,47 @@ public class OtpService {
     private long expirationTimeInSecond;
 
     @Autowired
-    public OtpService(OtpRepository otpRepository, SendMailService sendMailService) {
-        this.otpRepository = otpRepository;
+    public OtpService(OtpCacheService otpCacheService, SendMailService sendMailService) {
+        this.otpCacheService = otpCacheService;
         this.sendMailService = sendMailService;
     }
 
     @Transactional
     public Otp createOtp(GenerateOtpRequest request) {
-
         try {
             String content = AESHelper.decrypt(request.getContent(), aesKey, aesIv);
             ObjectMapper objectMapper = new ObjectMapper();
             GenerateOtpDTO data = objectMapper.readValue(content, new TypeReference<>() {
             });
+            Otp otp = generateOtp(data);
+
             Map<String, String> sendInfo = objectMapper.readValue(data.getSendInfo(), new TypeReference<>() {
             });
-
-            Otp otp = generateOtp(data);
             String sendType = sendInfo.get("sendType");
-
-            switch (sendType) {
-                case Constants.OTP_SEND_TYPE_EMAIL -> {
-                    otp.setOtpCode(String.valueOf(new Random().nextInt(100000, 999999)));
-                    sendOtpByEmail(otp, sendInfo);
-                }
-                case Constants.OTP_SEND_TYPE_SMS -> {
-                    otp.setOtpCode(String.valueOf(new Random().nextInt(100000, 999999)));
-                    sendOtpBySms(otp, sendInfo);
-                }
-                case Constants.OTP_SEND_TYPE_CARD -> {
-                    Map<String, String> otpByCardInfo = proceedOtpByCard(sendInfo);
-                    otp.setOtpCode(otpByCardInfo.get("otpCode"));
-                    sendInfo.put("target", otpByCardInfo.get("position"));
-                    otp.setSendInfo(objectMapper.writeValueAsString(sendInfo));
-                }
-                default -> {
-                    log.info("Invalid OTP send type, requested send type: {}", sendType);
-                    throw new RuntimeException("Invalid OTP send type");
-                }
+            if (Constants.OTP_SEND_TYPE_CARD.equals(sendType)) {
+                Map<String, String> otpByCardInfo = proceedOtpByCard(sendInfo);
+                otp.setOtpCode(otpByCardInfo.get("otpCode"));
+                sendInfo.put("target", otpByCardInfo.get("position"));
+                otp.setSendInfo(objectMapper.writeValueAsString(sendInfo));
+            } else if (Constants.OTP_SEND_TYPE_EMAIL.equals(sendType)) {
+                otp.setOtpCode(String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999)));
+                sendOtpByEmail(otp, sendInfo);
+            } else if (Constants.OTP_SEND_TYPE_SMS.equals(sendType)) {
+                otp.setOtpCode(String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999)));
+                sendOtpBySms(otp, sendInfo);
+            } else {
+                log.info("Invalid OTP send type, requested send type: {}", sendType);
+                throw new RuntimeException("Invalid OTP send type");
             }
 
-            otpRepository.save(otp);
+            otpCacheService.saveOtp(otp);
             return otp;
         } catch (Exception e) {
             log.error("Error while generating OTP: {}", e.getMessage());
             throw new RuntimeException("Error while generating OTP");
         }
     }
+
 
     private Otp generateOtp(GenerateOtpDTO data) {
         Otp otp = new Otp();
@@ -115,7 +109,6 @@ public class OtpService {
         }
 
         return otp;
-
     }
 
     private Map<String, String> proceedOtpByCard(Map<String, String> sendInfo) {
@@ -154,6 +147,7 @@ public class OtpService {
         }
     }
 
+    @Transactional
     public Otp verifyOtp(VerifyOtpRequest request) {
         log.info("Trying to verify the OTP, request Id: {}",
                 RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
@@ -163,7 +157,7 @@ public class OtpService {
 
             VerifyOtpDTO data = objectMapper.readValue(strRequest, new TypeReference<>() {
             });
-            Otp otp = otpRepository.findByTrackingId(data.getTrackingId());
+            Otp otp = otpCacheService.getOtpByTrackingId(data.getTrackingId());
             if (otp == null) {
                 log.info("Could not find OTP: {}", data.getTrackingId());
                 throw new RuntimeException("Could not find OTP");
@@ -180,8 +174,8 @@ public class OtpService {
                 otp.setRetryCount(otp.getRetryCount() + 1);
                 log.info("Failed to verify OTP: {}, input otp code: {}", data.getTrackingId(), data.getOtpCode());
             }
-            otpRepository.save(otp);
 
+            otpCacheService.updateOtp(otp);
             return otp;
         } catch (OtpException e) {
             throw e;
@@ -191,13 +185,48 @@ public class OtpService {
         }
     }
 
+    @Transactional
+    public Otp resendOtp(String trackingId) {
+        Otp otp = otpCacheService.getOtpByTrackingId(trackingId);
+        if (otp == null) {
+            log.info("Could not find OTP: {}", trackingId);
+            throw new RuntimeException("Could not find OTP");
+        }
+
+        statusCheck(otp);
+        retryingCheck(otp);
+        expiringCheck(otp);
+        resendingCheck(otp);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            Map<String, String> sendInfo = objectMapper.readValue(otp.getSendInfo(), new TypeReference<>() {
+            });
+            String sendType = sendInfo.get("sendType");
+            if (Constants.OTP_SEND_TYPE_EMAIL.equals(sendType)) {
+                sendOtpByEmail(otp, sendInfo);
+            } else if (Constants.OTP_SEND_TYPE_SMS.equals(sendType)) {
+                sendOtpBySms(otp, sendInfo);
+            } else {
+                log.info("Error while resending OTP: Invalid OTP send type, requested send type: {}", sendType);
+                throw new RuntimeException("Error while resending OTP");
+            }
+        } catch (JsonProcessingException e) {
+            log.error("Error while parsing sendInfo: {}", e.getMessage());
+            throw new RuntimeException("Error while resending OTP");
+        }
+        otp.setResendCount(otp.getResendCount() + 1);
+        otpCacheService.updateOtp(otp);
+        return otp;
+    }
+
     private void integrityCheck(Otp otp) {
         String strData = otp.getTrackingId() + otp.getType() + otp.getCreatedAt() + otp.getExpiringTime();
         try {
             String hashCode = AESHelper.encrypt(strData, aesKey, aesIv);
             if (!hashCode.equals(otp.getHashToken())) {
                 otp.setStatus(Constants.OTP_STATUS_REJECTED);
-                otpRepository.save(otp);
+                otpCacheService.updateOtp(otp);
                 throw new Exception("Hash token mismatch");
             }
         } catch (Exception e) {
@@ -216,7 +245,7 @@ public class OtpService {
     private void expiringCheck(Otp otp) {
         if (otp.getExpiringTime().before(new Timestamp(System.currentTimeMillis()))) {
             otp.setStatus(Constants.OTP_STATUS_EXPIRED);
-            otpRepository.save(otp);
+            otpCacheService.updateOtp(otp);
             log.info("OTP expired: {}", otp.getTrackingId());
             throw new OtpException("OTP expired");
         }
@@ -225,9 +254,18 @@ public class OtpService {
     private void retryingCheck(Otp otp) {
         if (otp.getRetryCount() >= otp.getMaxRetry()) {
             otp.setStatus(Constants.OTP_STATUS_REJECTED);
-            otpRepository.save(otp);
+            otpCacheService.updateOtp(otp);
             log.info("Max retry count reached: {}", otp.getTrackingId());
             throw new OtpException("Max retry count reached");
+        }
+    }
+
+    private void resendingCheck(Otp otp) {
+        if (otp.getResendCount() >= otp.getMaxResend()) {
+            otp.setStatus(Constants.OTP_STATUS_REJECTED);
+            otpCacheService.updateOtp(otp);
+            log.info("Max resend count reached: {}", otp.getTrackingId());
+            throw new OtpException("Max resend count reached");
         }
     }
 }

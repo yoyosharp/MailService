@@ -1,6 +1,5 @@
 package com.app.MailService.Entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,14 +23,12 @@ public class Otp {
     @Column(name = "tracking_id")
     private String trackingId;
 
-    @JsonIgnore
     @Column(name = "client")
     private String clientId;
 
     @Column(name = "otp_type")
     private String type;
 
-    @JsonIgnore
     @Column(name = "otp_code")
     private String otpCode;
 
@@ -56,15 +53,12 @@ public class Otp {
     @Column(name = "status")
     private String status;
 
-    @JsonIgnore
     @Column(name = "hash_token")
     private String hashToken;
 
-    @JsonIgnore
     @Column(name = "created_at")
     private Timestamp createdAt;
 
-    @JsonIgnore
     @LastModifiedDate
     @Column(name = "updated_at")
     private Timestamp updatedAt;

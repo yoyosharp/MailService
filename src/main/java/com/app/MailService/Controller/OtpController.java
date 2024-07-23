@@ -1,17 +1,17 @@
 package com.app.MailService.Controller;
 
 import com.app.MailService.Entity.Otp;
+import com.app.MailService.Model.DTO.OtpResponseDTO;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Model.Request.VerifyOtpRequest;
 import com.app.MailService.Model.Response.ApiResponse;
 import com.app.MailService.Service.OtpService;
+import com.app.MailService.Utilities.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.Timestamp;
 
@@ -30,25 +30,31 @@ public class OtpController {
 
     @PostMapping(GENERATE_OTP)
     public ResponseEntity<?> generateOtp(@RequestBody GenerateOtpRequest request) {
-
         Otp otp = otpService.createOtp(request);
-
-        ApiResponse response = new ApiResponse();
-        response.setStatus(HttpStatus.OK.value());
-        response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
-        response.setMessage("OTP generated successfully");
-        response.setResult(otp);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return generateOtpResponse(otp, "OTP generated successfully");
     }
 
     @PostMapping(VERIFY_OTP)
     public ResponseEntity<?> validateOtp(@RequestBody VerifyOtpRequest request) {
         Otp otp = otpService.verifyOtp(request);
+        String message = "OTP verifying result: ";
+        message += otp.getStatus().equals(Constants.OTP_STATUS_VERIFIED) ? "successful" : "failed";
+        return generateOtpResponse(otp, message);
+    }
+
+    private ResponseEntity<ApiResponse> generateOtpResponse(Otp otp, String message) {
+        OtpResponseDTO otpResponseDTO = new OtpResponseDTO(otp);
         ApiResponse response = new ApiResponse();
         response.setStatus(HttpStatus.OK.value());
         response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
-        response.setMessage("OTP verifying result");
-        response.setResult(otp);
+        response.setMessage(message);
+        response.setResult(otpResponseDTO);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(RESEND_OTP)
+    public ResponseEntity<?> resendOtp(@RequestParam String trackingId) {
+        Otp otp = otpService.resendOtp(trackingId);
+        return generateOtpResponse(otp, "OTP resent successfully");
     }
 }
