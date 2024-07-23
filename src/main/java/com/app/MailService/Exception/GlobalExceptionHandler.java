@@ -1,4 +1,4 @@
-package com.app.MailService.Exception.Handler;
+package com.app.MailService.Exception;
 
 import com.app.MailService.Model.Response.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,12 +14,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGlobalException(Exception ex, HttpServletRequest request) {
         ApiErrorResponse errorResponse = new ApiErrorResponse(
-                LocalDateTime.now(),
+                LocalDateTime.now().toString(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                HttpStatus.INTERNAL_SERVER_ERROR.name(),
                 ex.getMessage(),
                 request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(OtpException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFoundException(OtpException ex, HttpServletRequest request) {
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                LocalDateTime.now().toString(),
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 }

@@ -1,29 +1,29 @@
 package com.app.MailService.Service;
 
-import com.app.MailService.Controller.SendMailController;
 import com.app.MailService.Entity.QueueMessage;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.RabbitMQ.Publisher;
-import com.app.MailService.RabbitMQ.RabbitMQConfig;
 import com.app.MailService.Repository.QueueMessageRepository;
 import com.app.MailService.Utilities.AESHelper;
+import com.app.MailService.Utilities.Constants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.util.Map;
 
 @Service
+@Slf4j
 public class SendMailService {
 
     private final Publisher publisher;
     private final QueueMessageRepository queueMessageRepository;
-    Logger logger = LoggerFactory.getLogger(SendMailController.class);
     @Value("${aes.key}")
     private String aesKey;
     @Value("${aes.iv}")
@@ -38,27 +38,41 @@ public class SendMailService {
 
     @Transactional
     public String enQueue(EmailMessageRequest request) {
-        System.out.println(request.isEncrypted());
         String routingKey = request.getRequestType();
-        String content = request.getContent();
-        ObjectMapper objectMapper = new ObjectMapper();
-        if (!RabbitMQConfig.routingKeys.contains(routingKey)) {
-            throw new RuntimeException("Invalid routing key");
+        if (!Constants.routingKeys.contains(routingKey)) {
+            throw new RuntimeException("Invalid request type");
         }
         try {
-            if (request.isEncrypted()) {
-                content = AESHelper.decrypt(content, aesKey, aesIv);
-            }
+            String content = request.isEncrypted() ? AESHelper.decrypt(request.getContent(), aesKey, aesIv) : request.getContent();
+
+            ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> sendMailData = objectMapper.readValue(content, new TypeReference<>() {
             });
-            QueueMessage queueMessage = new QueueMessage(sendMailData);
+
+            QueueMessage queueMessage = generateQueueMessage(sendMailData);
             queueMessageRepository.save(queueMessage);
+
             String strMessage = objectMapper.writeValueAsString(queueMessage);
             publisher.sendMessage(routingKey, strMessage);
+
             return queueMessage.getTrackingId();
         } catch (Exception e) {
-            logger.error("Error while enqueueing message: {}", e.getMessage());
+            log.error("Error while enqueueing message: {}", e.getMessage());
             throw new RuntimeException("Error while processing message");
         }
+    }
+
+    private QueueMessage generateQueueMessage(Map<String, String> data) {
+        QueueMessage queueMessage = new QueueMessage();
+        queueMessage.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
+        queueMessage.setClientId((String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
+        queueMessage.setFromAddress(data.get("fromAddress"));
+        queueMessage.setSenderName(data.get("senderName"));
+        queueMessage.setToAddress(data.get("toAddress"));
+        queueMessage.setSubject(data.get("subject"));
+        queueMessage.setEmailTemplate(data.get("emailTemplate"));
+        queueMessage.setData(data.get("data"));
+        queueMessage.setEmailSent(false);
+        return queueMessage;
     }
 }

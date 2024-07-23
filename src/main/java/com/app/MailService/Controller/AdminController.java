@@ -14,8 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import java.sql.Timestamp;
 import java.util.Map;
 
+import static com.app.MailService.Utilities.EndPointsConstants.*;
+
+;
+
 @Controller
-@RequestMapping("/admin")
+@RequestMapping(ADMIN)
 public class AdminController {
     @Autowired
     private ClientRepository clientRepository;
@@ -28,12 +32,12 @@ public class AdminController {
     @Value("${aes.iv}")
     private String aesIv;
 
-    @RequestMapping("/dashboard")
+    @RequestMapping(DASHBOARD)
     public String dashboard() {
         return "admin/dashboard";
     }
 
-    @GetMapping("/create-client")
+    @GetMapping(CREATE_CLIENT)
     public ResponseEntity<?> createClient(@RequestParam String clientId, @RequestParam String clientSecret) throws Exception {
         if (clientId == null || clientSecret == null) {
             return new ResponseEntity<>("ClientId and ClientSecret are required", HttpStatus.BAD_REQUEST);
