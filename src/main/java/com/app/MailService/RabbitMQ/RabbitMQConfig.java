@@ -32,6 +32,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue otpCardQueue() {
+        return new Queue(Constants.OTP_CARD_QUEUE);
+    }
+
+    @Bean
     public Binding bindingRegisterQueue(Queue registerOtpQueue, TopicExchange mailServiceExchange) {
         return BindingBuilder.bind(registerOtpQueue).to(mailServiceExchange).with(Constants.REGISTER_OTP_ROUTING_KEY);
     }
@@ -44,5 +49,10 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingForgotPasswordQueue(Queue forgotPasswordOtpQueue, TopicExchange mailServiceExchange) {
         return BindingBuilder.bind(forgotPasswordOtpQueue).to(mailServiceExchange).with(Constants.FORGOT_PASSWORD_OTP_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding bindingOtpCardQueue(Queue otpCardQueue, TopicExchange mailServiceExchange) {
+        return BindingBuilder.bind(otpCardQueue).to(mailServiceExchange).with(Constants.OTP_CARD_QUEUE_ROUTING_KEY);
     }
 }

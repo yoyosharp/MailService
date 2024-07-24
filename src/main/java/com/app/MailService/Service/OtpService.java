@@ -187,6 +187,9 @@ public class OtpService {
 
     @Transactional
     public Otp resendOtp(String trackingId) {
+        log.info("Trying to resend the OTP, request Id: {}, trackingId: {}",
+                RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST),
+                trackingId);
         Otp otp = otpCacheService.getOtpByTrackingId(trackingId);
         if (otp == null) {
             log.info("Could not find OTP: {}", trackingId);

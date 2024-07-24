@@ -55,6 +55,11 @@ public class Consumer {
         handle(message, Constants.FORGOT_PASSWORD_OTP_QUEUE);
     }
 
+    @RabbitListener(queues = Constants.OTP_CARD_QUEUE)
+    public void receiveOtpCardMessage(String message) {
+        handle(message, Constants.OTP_CARD_QUEUE);
+    }
+
     private void handle(String message, String queueName) {
         log.info("Received message from {}: {}", queueName, message);
         try {

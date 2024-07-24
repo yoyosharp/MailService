@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Slf4j
 public class EmailTemplate {
 
     @Id
@@ -40,6 +42,7 @@ public class EmailTemplate {
     }
 
     public String fillTemplate(Map<String, String> variables) {
+        log.info("Loading data on template {}", this.name);
         List<String> variableFields = getVariableFieldList();
         String filledTemplate = template;
         for (String variableField : variableFields) {

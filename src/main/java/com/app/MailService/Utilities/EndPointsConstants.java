@@ -13,6 +13,9 @@ public class EndPointsConstants {
     public static final String GENERATE_OTP = "/generate";
     public static final String VERIFY_OTP = "/verify";
     public static final String RESEND_OTP = "/resend";
+    public static final String CREATE_CARD = "/create-card";
+    public static final String GENERATE_CARDS = "/generate-cards";
+
 
     public static final String ADMIN = "/admin";
     public static final String DASHBOARD = "/dashboard";

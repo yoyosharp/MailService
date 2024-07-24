@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(OtpException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFoundException(OtpException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleOtpException(OtpException ex, HttpServletRequest request) {
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 LocalDateTime.now().toString(),
                 HttpStatus.BAD_REQUEST.value(),
