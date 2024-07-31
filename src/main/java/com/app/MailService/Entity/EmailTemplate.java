@@ -42,7 +42,7 @@ public class EmailTemplate {
     }
 
     public String fillTemplate(Map<String, String> variables) {
-        log.info("Loading data on template {}", this.name);
+        log.info("Loading data on to template {}", this.name);
         List<String> variableFields = getVariableFieldList();
         String filledTemplate = template;
         for (String variableField : variableFields) {

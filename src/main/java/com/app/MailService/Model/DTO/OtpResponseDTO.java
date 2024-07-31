@@ -16,9 +16,9 @@ public class OtpResponseDTO {
     private Integer retryCount;
     private Integer maxResend;
     private Integer resendCount;
+    private String sendInfo;
     private String status;
     private Timestamp createdAt;
-    private Timestamp updatedAt;
 
     public OtpResponseDTO(Otp otp) {
         this();
@@ -29,8 +29,8 @@ public class OtpResponseDTO {
         this.retryCount = otp.getRetryCount();
         this.maxResend = otp.getMaxResend();
         this.resendCount = otp.getResendCount();
+        this.sendInfo = otp.getSendInfo();
         this.status = otp.getStatus();
         this.createdAt = otp.getCreatedAt();
-        this.updatedAt = otp.getUpdatedAt();
     }
 }

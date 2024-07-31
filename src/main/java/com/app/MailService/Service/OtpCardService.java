@@ -3,6 +3,7 @@ package com.app.MailService.Service;
 import com.app.MailService.Entity.EmailTemplate;
 import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Entity.OtpCardToken;
+import com.app.MailService.Entity.Projection.OtpCardProjection;
 import com.app.MailService.Model.DTO.UserCardInfo;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Repository.EmailTemplateRepository;
@@ -14,6 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -56,10 +60,10 @@ public class OtpCardService {
     }
 
     public int publishOtpCards(int quantity) {
-        List<OtpCard> otpCards = new ArrayList<>();
+        if (quantity > 20) quantity = 20;
         int generated = 0;
         for (int i = 0; i < quantity; i++) {
-            OtpCard otpCard = createSingleOtpCard(true);
+            createSingleOtpCard(true);
             generated++;
         }
         log.info("Generated {} OTP cards", generated);
@@ -68,23 +72,26 @@ public class OtpCardService {
 
     public boolean userCreateOtpCard(UserCardInfo userCardInfo) {
         OtpCard otpCard = createSingleOtpCard(false);
-
         otpCard = bindCardToUser(userCardInfo, otpCard);
-
         String html = generateOtpCardFileHtmlText(userCardInfo, otpCard);
 
-        String url = "";
+        byte[] pdfBytes;
         try {
-            byte[] pdfBytes = pdfService.createPdfFromHtml(html, userCardInfo.getUserProvidedPassword());
-            String fileName = userCardInfo.getUserName() + "_" + UUID.randomUUID() + ".pdf";
-            url = s3Service.uploadFile(fileName, pdfBytes);
+            pdfBytes = pdfService.createPdfFromHtml(html, userCardInfo.getUserProvidedPassword());
         } catch (Exception e) {
+            log.error("Error while generating PDF: {}", e.getMessage());
             throw new RuntimeException(e);
         }
 
-        sendOtpCardByEmail(userCardInfo.getUserEmail(), userCardInfo.getUserName(), url);
-
+        handleUploadToS3AndSendEmail(userCardInfo, pdfBytes);
         return true;
+    }
+
+    @Async
+    protected void handleUploadToS3AndSendEmail(UserCardInfo userCardInfo, byte[] pdfBytes) {
+        String fileName = userCardInfo.getUserName() + "_" + UUID.randomUUID() + ".pdf";
+        String url = s3Service.uploadFile(fileName, pdfBytes);
+        sendOtpCardByEmail(userCardInfo.getUserEmail(), userCardInfo.getUserName(), url);
     }
 
     private String generateOtpCardFileHtmlText(UserCardInfo userCardInfo, OtpCard otpCard) {
@@ -113,39 +120,38 @@ public class OtpCardService {
         otpCard.setIssueAt(now);
         Timestamp endOfTheExpiringDay = Timestamp.valueOf(now.toLocalDateTime().plusDays(expirationTimeInDays).with(LocalTime.MAX));
         otpCard.setExpireAt(endOfTheExpiringDay);
+        otpCard.setStatus(Constants.OTP_CARD_STATUS_ACTIVE);
         try {
             otpCard.setHashToken(generateOtpCardHash(otpCard));
         } catch (Exception e) {
             log.error("Failed to generate hash token for otp card: {}", otpCard);
             throw new RuntimeException("Failed to generate hash token for otp card");
         }
-        otpCard.setStatus(Constants.OTP_CARD_STATUS_ACTIVE);
-
         return otpCardRepository.save(otpCard);
     }
 
     private OtpCard createSingleOtpCard(boolean isAdminCreated) {
         String serial = generateSerial(isAdminCreated);
-        List<OtpCardToken> otpCardTokens = generateCardTokens(serial);
-
         OtpCard otpCard = new OtpCard();
         otpCard.setCardSerial(serial);
-        otpCard.setOtpCardTokens(otpCardTokens);
         otpCard.setPublishedAt(new Timestamp(System.currentTimeMillis()));
         otpCard.setStatus(Constants.OTP_CARD_STATUS_AVAILABLE);
 
+        List<OtpCardToken> otpCardTokens = generateCardTokens(otpCard);
+
+        otpCard.setOtpCardTokens(otpCardTokens);
         return otpCardRepository.save(otpCard);
     }
 
     private String generateSerial(boolean isAdminCreated) {
         String timestampStr = String.valueOf(Instant.now().toEpochMilli());
         String timestampPart = timestampStr.substring(timestampStr.length() - 8);
-        return isAdminCreated ? otpCardPrefixAdmin : otpCardPrefixUser
+        return (isAdminCreated ? otpCardPrefixAdmin : otpCardPrefixUser)
                 + timestampPart + ThreadLocalRandom.current().nextInt(100000, 999999);
     }
 
-    private List<OtpCardToken> generateCardTokens(String serial) {
-        log.info("Generating card tokens for serial: {}", serial);
+    private List<OtpCardToken> generateCardTokens(OtpCard otpCard) {
+        log.info("Generating card tokens for card serial: {}", otpCard.getCardSerial());
         List<OtpCardToken> result = new ArrayList<>();
         Set<Integer> generatedToken = new HashSet<>();
         int token;
@@ -156,17 +162,18 @@ public class OtpCardService {
             while (generatedToken.contains(token));
             generatedToken.add(token);
 
-            OtpCardToken otpCardToken = new OtpCardToken(serial, i, String.valueOf(token));
+            OtpCardToken otpCardToken = new OtpCardToken(otpCard.getCardSerial(), i, String.valueOf(token));
+            otpCardToken.setOtpCard(otpCard);
             try {
                 otpCardToken.setHashToken(generateOtpCardTokenHash(otpCardToken));
             } catch (Exception e) {
-                log.error("Error while generating hash token, skipped serial: {}", serial);
+                log.error("Error while generating hash token, skipped serial: {}", otpCardToken.getCardSerial());
                 return null;
             }
             result.add(otpCardToken);
         }
 
-        log.info("Finished generating card tokens for serial: {}", serial);
+        log.info("Finished generating card tokens for serial: {}", otpCard.getCardSerial());
         return result;
     }
 
@@ -181,12 +188,19 @@ public class OtpCardService {
     }
 
     private void sendOtpCardByEmail(String userEmail, String userName, String pdfUrl) {
+        log.info("Sending otp card to email: {}", userEmail);
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> content = new HashMap<>();
 
-            content.put("trackingId", (String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
-            content.put("clientId", (String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
+            try {
+                content.put("trackingId", (String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
+                content.put("clientId", (String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
+            } catch (NullPointerException e) {
+                content.put("trackingId", UUID.randomUUID().toString());
+                content.put("clientId", "admin");
+            }
+
             content.put("fromAddress", Constants.OTP_CARD_SEND_EMAIL_FROM_ADDRESS);
             content.put("senderName", Constants.OTP_CARD_SEND_EMAIL_SENDER_NAME);
             content.put("toAddress", userEmail);
@@ -205,5 +219,32 @@ public class OtpCardService {
         } catch (Exception e) {
             log.error("Error while sending OTP: {}", e.getMessage());
         }
+    }
+
+    public void bindCard(Long userId, String cardSerial) {
+
+        if (otpCardRepository.existsByUserIdAndStatus(userId, Constants.OTP_CARD_STATUS_ACTIVE)) {
+            throw new RuntimeException("User already has an active card");
+        }
+
+        Optional<OtpCard> otpCardWrapper = otpCardRepository.findByCardSerial(cardSerial, Constants.OTP_CARD_STATUS_AVAILABLE);
+        if (otpCardWrapper.isEmpty()) {
+            throw new RuntimeException("No available card found");
+        }
+
+        OtpCard otpCard = otpCardWrapper.get();
+        otpCard.setUserId(userId);
+        otpCard.setStatus(Constants.OTP_CARD_STATUS_ACTIVE);
+        otpCardRepository.save(otpCard);
+    }
+
+    public Page<OtpCardProjection> fetchOtpCards(Pageable pageRequest, String status) {
+        if (status == null) return otpCardRepository.fetchAll(pageRequest);
+        else return otpCardRepository.findAllByStatus(status, pageRequest);
+    }
+
+    public Page<OtpCardProjection> findUserOtpCards(Pageable pageable, Long userId, String status) {
+        if (status == null) return otpCardRepository.findAllByUserId(userId, pageable);
+        else return otpCardRepository.findAllByUserIdAndStatus(userId, status, pageable);
     }
 }

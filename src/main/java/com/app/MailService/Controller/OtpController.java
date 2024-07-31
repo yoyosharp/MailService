@@ -52,7 +52,7 @@ public class OtpController {
         response.setStatus(HttpStatus.OK.value());
         response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
         response.setMessage(message);
-        response.setResult(otpResponseDTO);
+        response.setData(otpResponseDTO);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

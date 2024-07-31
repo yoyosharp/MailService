@@ -32,6 +32,10 @@ public class OtpCardToken {
     @Column(name = "create_at")
     private Timestamp createAt;
 
+    @ManyToOne
+    @JoinColumn(name = "otp_card_id")
+    private OtpCard otpCard;
+
     public OtpCardToken(String cardSerial, Integer position, String token) {
         this.cardSerial = cardSerial;
         this.position = position;

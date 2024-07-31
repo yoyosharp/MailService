@@ -40,7 +40,7 @@ public class SendMailController {
             apiResponse.setMessage("Message sent successfully!");
             apiResponse.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
             apiResponse.setStatus(HttpStatus.OK.value());
-            apiResponse.setResult(trackingId);
+            apiResponse.setData(trackingId);
             return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         } catch (Exception e) {
             ApiErrorResponse response = new ApiErrorResponse();

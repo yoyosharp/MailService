@@ -39,7 +39,6 @@ public class OtpCard {
     @Column(name = "hash_token")
     private String hashToken;
 
-    @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "card_serial")
+    @OneToMany(mappedBy = "otpCard", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OtpCardToken> otpCardTokens;
 }

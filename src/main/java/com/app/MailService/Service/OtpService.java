@@ -1,12 +1,14 @@
 package com.app.MailService.Service;
 
 import com.app.MailService.Entity.Otp;
+import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Exception.OtpException;
 import com.app.MailService.Model.DTO.GenerateOtpDTO;
 import com.app.MailService.Model.DTO.VerifyOtpDTO;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Model.Request.VerifyOtpRequest;
+import com.app.MailService.Repository.OtpCardRepository;
 import com.app.MailService.Utilities.AESHelper;
 import com.app.MailService.Utilities.Constants;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,6 +18,7 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -23,6 +26,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -31,6 +35,7 @@ public class OtpService {
 
     private final OtpCacheService otpCacheService;
     private final SendMailService sendMailService;
+    private final OtpCardRepository otpCardRepository;
     @Value("${aes.key}")
     private String aesKey;
     @Value("${aes.iv}")
@@ -43,13 +48,15 @@ public class OtpService {
     private long expirationTimeInSecond;
 
     @Autowired
-    public OtpService(OtpCacheService otpCacheService, SendMailService sendMailService) {
+    public OtpService(OtpCacheService otpCacheService, SendMailService sendMailService, OtpCardRepository otpCardRepository) {
         this.otpCacheService = otpCacheService;
         this.sendMailService = sendMailService;
+        this.otpCardRepository = otpCardRepository;
     }
 
     @Transactional
     public Otp createOtp(GenerateOtpRequest request) {
+        log.info("Generate otp request: {}", RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
         try {
             String content = AESHelper.decrypt(request.getContent(), aesKey, aesIv);
             ObjectMapper objectMapper = new ObjectMapper();
@@ -63,7 +70,7 @@ public class OtpService {
             if (Constants.OTP_SEND_TYPE_CARD.equals(sendType)) {
                 Map<String, String> otpByCardInfo = proceedOtpByCard(sendInfo);
                 otp.setOtpCode(otpByCardInfo.get("otpCode"));
-                sendInfo.put("target", otpByCardInfo.get("position"));
+                sendInfo.put("position", otpByCardInfo.get("position"));
                 otp.setSendInfo(objectMapper.writeValueAsString(sendInfo));
             } else if (Constants.OTP_SEND_TYPE_EMAIL.equals(sendType)) {
                 otp.setOtpCode(String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999)));
@@ -83,8 +90,7 @@ public class OtpService {
             throw new RuntimeException("Error while generating OTP");
         }
     }
-
-
+    
     private Otp generateOtp(GenerateOtpDTO data) {
         Otp otp = new Otp();
         otp.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
@@ -107,20 +113,37 @@ public class OtpService {
             log.error("Error while hashing OTP: {}", e.getMessage());
             throw new RuntimeException(e);
         }
-
         return otp;
     }
 
     private Map<String, String> proceedOtpByCard(Map<String, String> sendInfo) {
         //TO DO : implement otp by card
-        return null;
+        Map<String, String> otpByCardData = new HashMap<>(sendInfo);
+        Long userId = Long.parseLong(sendInfo.get("target"));
+        Optional<OtpCard> userOtpCardWrapper = otpCardRepository.getUserOtpCard(userId, Constants.OTP_CARD_STATUS_ACTIVE);
+        if (userOtpCardWrapper.isEmpty()) {
+            throw new RuntimeException("No active otp card found for user: " + userId);
+        }
+
+        Integer position = ThreadLocalRandom.current().nextInt(1, 36);
+
+        String token = userOtpCardWrapper.get().getOtpCardTokens().stream()
+                .filter(t -> t.getPosition() == position)
+                .findFirst()
+                .get()
+                .getToken();
+        otpByCardData.put("otpCode", token);
+        otpByCardData.put("position", String.valueOf(position));
+        return otpByCardData;
     }
 
-    private void sendOtpBySms(Otp otp, Map<String, String> sendInfo) {
+    @Async
+    protected void sendOtpBySms(Otp otp, Map<String, String> sendInfo) {
 
     }
 
-    private void sendOtpByEmail(Otp otp, Map<String, String> sendInfo) {
+    @Async
+    protected void sendOtpByEmail(Otp otp, Map<String, String> sendInfo) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, String> content = new HashMap<>();
