@@ -1,7 +1,7 @@
 package com.app.MailService.Controller;
 
 import com.app.MailService.Entity.Client;
-import com.app.MailService.Entity.Projection.OtpCardProjection;
+import com.app.MailService.Model.Projection.OtpCardProjection;
 import com.app.MailService.Model.Response.ApiResponse;
 import com.app.MailService.Repository.ClientRepository;
 import com.app.MailService.Service.OtpCardService;
@@ -94,19 +94,20 @@ public class AdminController {
 
     @PostMapping(BIND_CARD)
     public ResponseEntity<?> bindCard(@RequestParam Long userId, @RequestParam String cardSerial) {
-        otpCardService.bindCard(userId, cardSerial);
+        OtpCardProjection boundCard = otpCardService.bindCard(userId, cardSerial);
         ApiResponse apiResponse = new ApiResponse();
         apiResponse.setStatus(HttpStatus.OK.value());
         apiResponse.setMessage("Successfully bound card to the user");
         apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
+        apiResponse.setData(boundCard);
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping(GET_CARDS)
-    public ResponseEntity<?> getCards(@RequestParam(required = false) Integer pageIndex,
-                                      @RequestParam(required = false) Integer pageSize,
-                                      @RequestParam(required = false) Long userId,
-                                      @RequestParam(required = false) String status) {
+    @GetMapping(SHOW_CARDS)
+    public ResponseEntity<?> showCards(@RequestParam(required = false) Integer pageIndex,
+                                       @RequestParam(required = false) Integer pageSize,
+                                       @RequestParam(required = false) Long userId,
+                                       @RequestParam(required = false) String status) {
         if (pageIndex == null || pageIndex <= 0) pageIndex = 0;
         else pageIndex--;
         if (pageSize == null) pageSize = 10;

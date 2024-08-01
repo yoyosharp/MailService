@@ -3,8 +3,8 @@ package com.app.MailService.Service;
 import com.app.MailService.Entity.EmailTemplate;
 import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Entity.OtpCardToken;
-import com.app.MailService.Entity.Projection.OtpCardProjection;
 import com.app.MailService.Model.DTO.UserCardInfo;
+import com.app.MailService.Model.Projection.OtpCardProjection;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Repository.EmailTemplateRepository;
 import com.app.MailService.Repository.OtpCardRepository;
@@ -221,21 +221,18 @@ public class OtpCardService {
         }
     }
 
-    public void bindCard(Long userId, String cardSerial) {
+    public OtpCard bindCard(Long userId, String cardSerial) {
 
         if (otpCardRepository.existsByUserIdAndStatus(userId, Constants.OTP_CARD_STATUS_ACTIVE)) {
             throw new RuntimeException("User already has an active card");
         }
 
-        Optional<OtpCard> otpCardWrapper = otpCardRepository.findByCardSerial(cardSerial, Constants.OTP_CARD_STATUS_AVAILABLE);
-        if (otpCardWrapper.isEmpty()) {
-            throw new RuntimeException("No available card found");
-        }
+        OtpCard otpCard = otpCardRepository.findByCardSerial(cardSerial, Constants.OTP_CARD_STATUS_AVAILABLE)
+                .orElseThrow(() -> new RuntimeException("Card not found or already bound to another user"));
 
-        OtpCard otpCard = otpCardWrapper.get();
         otpCard.setUserId(userId);
         otpCard.setStatus(Constants.OTP_CARD_STATUS_ACTIVE);
-        otpCardRepository.save(otpCard);
+        return otpCardRepository.save(otpCard);
     }
 
     public Page<OtpCardProjection> fetchOtpCards(Pageable pageRequest, String status) {

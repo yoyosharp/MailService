@@ -1,7 +1,7 @@
 package com.app.MailService.Repository;
 
 import com.app.MailService.Entity.OtpCard;
-import com.app.MailService.Entity.Projection.OtpCardProjection;
+import com.app.MailService.Model.Projection.OtpCardProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

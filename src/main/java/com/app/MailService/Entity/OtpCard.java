@@ -1,5 +1,6 @@
 package com.app.MailService.Entity;
 
+import com.app.MailService.Model.Projection.OtpCardProjection;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class OtpCard {
+public class OtpCard implements OtpCardProjection {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

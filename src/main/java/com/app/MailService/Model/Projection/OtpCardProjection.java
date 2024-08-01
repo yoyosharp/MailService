@@ -1,4 +1,4 @@
-package com.app.MailService.Entity.Projection;
+package com.app.MailService.Model.Projection;
 
 import java.sql.Timestamp;
 

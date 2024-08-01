@@ -20,35 +20,59 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
     @Autowired
     private APIKeyFilter apiKeyFilter;
 
     @Bean
     @Order(1)
-    public SecurityFilterChain apiKeyFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Allow all requests to login, logout page, and static resources
         http
-                .securityMatcher("/admin/**")
-                .authorizeHttpRequests(authorize ->
-                        authorize.anyRequest().authenticated()
+                .securityMatcher("/login", "/logout", "/css/**", "/js/**", "/images/**")
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(Customizer.withDefaults());
+                .formLogin(Customizer.withDefaults()) // Ensure default form login is enabled
+                .logout(Customizer.withDefaults());
 
         return http.build();
     }
 
     @Bean
     @Order(2)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Secure /admin/**
         http
-                .authorizeHttpRequests(authorize ->
-                        authorize.anyRequest().permitAll())
+                .securityMatcher("/admin/**")
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().authenticated()
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(Customizer.withDefaults())
+                .logout(Customizer.withDefaults())
+                .httpBasic(Customizer.withDefaults());
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(3)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Apply APIKeyFilter to API requests
+        http
+                .securityMatcher("/api/v1/**")
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll()
+                )
                 .csrf(AbstractHttpConfigurer::disable)
                 .addFilterBefore(apiKeyFilter, BasicAuthenticationFilter.class);
 
         return http.build();
     }
 
+    //disable default registration for ApiKeyFilter
     @Bean
     public FilterRegistrationBean<APIKeyFilter> apiKeyFilterFilterRegistrationBean(APIKeyFilter filter) {
         FilterRegistrationBean<APIKeyFilter> registration = new FilterRegistrationBean<>(filter);
@@ -58,13 +82,13 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails userDetails = User.builder()
+        UserDetails user = User.builder()
                 .username("user")
-                .password("$2a$10$fq6sDdebjXPGkNHxDodyzu9kJfEfINV2QL.YbNkLTn2KJD1hDyCSe")
+                .password(bCryptEncoder().encode("123456"))
                 .roles("USER")
                 .build();
 
-        return new InMemoryUserDetailsManager(userDetails);
+        return new InMemoryUserDetailsManager(user);
     }
 
     @Bean

@@ -16,7 +16,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -46,14 +45,13 @@ public class APIKeyFilter extends OncePerRequestFilter {
             return;
         }
 
-        Optional<Client> clientWrapper = clientRepository.findByClientId(clientId);
-        if (clientWrapper.isEmpty()) {
+        Client client = clientRepository.findByClientId(clientId)
+                .orElse(null);
+        if (client == null) {
             log.info("Incoming request rejected: invalid clientId");
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "invalid clientId");
             return;
         }
-
-        Client client = clientWrapper.get();
 
         if (!validate(client)) {
             log.info("Incoming request rejected: client validation failed");

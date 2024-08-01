@@ -26,7 +26,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -56,7 +56,7 @@ public class OtpService {
 
     @Transactional
     public Otp createOtp(GenerateOtpRequest request) {
-        log.info("Generate otp request: {}", RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
+
         try {
             String content = AESHelper.decrypt(request.getContent(), aesKey, aesIv);
             ObjectMapper objectMapper = new ObjectMapper();
@@ -67,6 +67,10 @@ public class OtpService {
             Map<String, String> sendInfo = objectMapper.readValue(data.getSendInfo(), new TypeReference<>() {
             });
             String sendType = sendInfo.get("sendType");
+            log.info("Generating otp for request: {}, sendType: {}",
+                    RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST),
+                    sendType);
+
             if (Constants.OTP_SEND_TYPE_CARD.equals(sendType)) {
                 Map<String, String> otpByCardInfo = proceedOtpByCard(sendInfo);
                 otp.setOtpCode(otpByCardInfo.get("otpCode"));
@@ -90,7 +94,7 @@ public class OtpService {
             throw new RuntimeException("Error while generating OTP");
         }
     }
-    
+
     private Otp generateOtp(GenerateOtpDTO data) {
         Otp otp = new Otp();
         otp.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
@@ -117,18 +121,15 @@ public class OtpService {
     }
 
     private Map<String, String> proceedOtpByCard(Map<String, String> sendInfo) {
-        //TO DO : implement otp by card
         Map<String, String> otpByCardData = new HashMap<>(sendInfo);
         Long userId = Long.parseLong(sendInfo.get("target"));
-        Optional<OtpCard> userOtpCardWrapper = otpCardRepository.getUserOtpCard(userId, Constants.OTP_CARD_STATUS_ACTIVE);
-        if (userOtpCardWrapper.isEmpty()) {
-            throw new RuntimeException("No active otp card found for user: " + userId);
-        }
+        OtpCard userOtpCard = otpCardRepository.getUserOtpCard(userId, Constants.OTP_CARD_STATUS_ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active otp card found for user: " + userId));
 
         Integer position = ThreadLocalRandom.current().nextInt(1, 36);
 
-        String token = userOtpCardWrapper.get().getOtpCardTokens().stream()
-                .filter(t -> t.getPosition() == position)
+        String token = userOtpCard.getOtpCardTokens().stream()
+                .filter(t -> Objects.equals(t.getPosition(), position))
                 .findFirst()
                 .get()
                 .getToken();
