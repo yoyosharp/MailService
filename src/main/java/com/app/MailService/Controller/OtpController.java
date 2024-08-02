@@ -2,7 +2,7 @@ package com.app.MailService.Controller;
 
 import com.app.MailService.Entity.Otp;
 import com.app.MailService.Model.DTO.OtpResponseDTO;
-import com.app.MailService.Model.DTO.UserCardInfo;
+import com.app.MailService.Model.DTO.UserGenerateCardInfo;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Model.Request.VerifyOtpRequest;
 import com.app.MailService.Model.Response.ApiResponse;
@@ -63,12 +63,16 @@ public class OtpController {
     }
 
     @PostMapping(CREATE_CARD)
-    public ResponseEntity<?> userCreateCard(@RequestBody UserCardInfo userCardInfo) {
-        boolean result = otpCardService.userCreateOtpCard(userCardInfo);
-        ApiResponse response = new ApiResponse();
-        response.setStatus(HttpStatus.OK.value());
-        response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
-        response.setMessage("Card created successfully");
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<?> userCreateCard(@RequestBody UserGenerateCardInfo userGenerateCardInfo) {
+        boolean result = otpCardService.userCreateOtpCard(userGenerateCardInfo);
+        if (!result) {
+            ApiResponse response = new ApiResponse();
+            response.setStatus(HttpStatus.OK.value());
+            response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
+            response.setMessage("Card created successfully");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

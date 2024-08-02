@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Getter
 @Data
-public class UserCardInfo {
+public class UserGenerateCardInfo {
     private Long userId;
     private String userName;
     private String userEmail;

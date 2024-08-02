@@ -4,6 +4,7 @@ import com.app.MailService.Entity.Otp;
 import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Exception.OtpException;
 import com.app.MailService.Model.DTO.GenerateOtpDTO;
+import com.app.MailService.Model.DTO.SendMailDTO;
 import com.app.MailService.Model.DTO.VerifyOtpDTO;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
@@ -64,8 +65,7 @@ public class OtpService {
             });
             Otp otp = generateOtp(data);
 
-            Map<String, String> sendInfo = objectMapper.readValue(data.getSendInfo(), new TypeReference<>() {
-            });
+            Map<String, String> sendInfo = data.getSendInfo();
             String sendType = sendInfo.get("sendType");
             log.info("Generating otp for request: {}, sendType: {}",
                     RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST),
@@ -95,12 +95,12 @@ public class OtpService {
         }
     }
 
-    private Otp generateOtp(GenerateOtpDTO data) {
+    private Otp generateOtp(GenerateOtpDTO data) throws JsonProcessingException {
         Otp otp = new Otp();
         otp.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
         otp.setClientId((String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
         otp.setType(data.getOtpType());
-        otp.setSendInfo(data.getSendInfo());
+        otp.setSendInfo(new ObjectMapper().writeValueAsString(data.getSendInfo()));
         otp.setStatus(Constants.OTP_STATUS_PENDING);
         otp.setMaxRetry(maxRetry);
         otp.setMaxResend(maxResend);
@@ -147,23 +147,20 @@ public class OtpService {
     protected void sendOtpByEmail(Otp otp, Map<String, String> sendInfo) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> content = new HashMap<>();
 
-            content.put("trackingId", otp.getTrackingId());
-            content.put("clientId", otp.getClientId());
-            content.put("fromAddress", Constants.OTP_SEND_EMAIL_FROM_ADDRESS);
-            content.put("senderName", Constants.OTP_SEND_EMAIL_SENDER_NAME);
-            content.put("toAddress", sendInfo.get("target"));
-            content.put("subject", Constants.OTP_SEND_EMAIL_SUBJECT);
-            content.put("emailTemplate", otp.getType());
+            SendMailDTO sendMailDTO = new SendMailDTO();
+            sendMailDTO.setFromAddress(Constants.OTP_SEND_EMAIL_FROM_ADDRESS);
+            sendMailDTO.setSenderName(Constants.OTP_SEND_EMAIL_SENDER_NAME);
+            sendMailDTO.setToAddress(sendInfo.get("target"));
+            sendMailDTO.setSubject(Constants.OTP_EMAIL_SUBJECT);
+            sendMailDTO.setEmailTemplate(otp.getType());
 
             Map<String, String> data = new HashMap<>();
             data.put("userName", sendInfo.get("userName"));
             data.put("otpCode", otp.getOtpCode());
-            String strData = objectMapper.writeValueAsString(data);
-            content.put("data", strData);
+            sendMailDTO.setData(data);
 
-            String strContent = objectMapper.writeValueAsString(content);
+            String strContent = objectMapper.writeValueAsString(sendMailDTO);
             EmailMessageRequest request = new EmailMessageRequest(otp.getType(), strContent, false);
             this.sendMailService.enQueue(request);
         } catch (Exception e) {

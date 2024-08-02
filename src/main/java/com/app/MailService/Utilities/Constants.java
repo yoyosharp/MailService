@@ -35,7 +35,7 @@ public class Constants {
 
     public static final String OTP_SEND_EMAIL_FROM_ADDRESS = "noreply@example.com";
     public static final String OTP_SEND_EMAIL_SENDER_NAME = "System Notification";
-    public static final String OTP_SEND_EMAIL_SUBJECT = "Mã OTP đăng ký tài khoản";
+    public static final String OTP_EMAIL_SUBJECT = "Mã xác thực OTP";
 
     public static final String EXCHANGE_NAME = "mailServiceExchange";
     public static final String REGISTER_OTP_QUEUE = "registerQueue";
@@ -54,10 +54,20 @@ public class Constants {
     );
 
     public static final String OTP_CARD_STATUS_ACTIVE = "active";
-    public static final String OTP_CARD_STATUS_DEACTIVATE = "deactivate";
+    public static final String OTP_CARD_STATUS_DEACTIVATED = "deactivate";
     public static final String OTP_CARD_STATUS_AVAILABLE = "available";
     public static final String OTP_CARD_STATUS_LOCKED = "locked";
     public static final String OTP_CARD_TEMPLATE_NAME = "otp_card";
+
+    public static final List<String> OTP_CARD_STATUS_CHANGEABLE_FROM_ACTIVE = List.of(
+            OTP_CARD_STATUS_DEACTIVATED,
+            OTP_CARD_STATUS_LOCKED
+    );
+
+    public static final List<String> OTP_CARD_STATUS_CHANGEABLE_FROM_LOCKED = List.of(
+            OTP_CARD_STATUS_ACTIVE,
+            OTP_CARD_STATUS_DEACTIVATED
+    );
 
     public static final String OTP_CARD_SEND_EMAIL_FROM_ADDRESS = "noreply@example.com";
     public static final String OTP_CARD_SEND_EMAIL_SENDER_NAME = "Thông báo từ hệ thống";

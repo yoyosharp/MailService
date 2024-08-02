@@ -4,8 +4,6 @@ import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Model.Response.ApiErrorResponse;
 import com.app.MailService.Model.Response.ApiResponse;
 import com.app.MailService.Service.SendMailService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +22,6 @@ import static com.app.MailService.Utilities.EndPointsConstants.SEND_MAIL_SINGLE;
 public class SendMailController {
 
     private final SendMailService sendMailService;
-    Logger logger = LoggerFactory.getLogger(SendMailController.class);
 
     @Autowired
     public SendMailController(SendMailService sendMailService) {

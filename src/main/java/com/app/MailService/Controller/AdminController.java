@@ -1,11 +1,13 @@
 package com.app.MailService.Controller;
 
 import com.app.MailService.Entity.Client;
+import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Model.Projection.OtpCardProjection;
 import com.app.MailService.Model.Response.ApiResponse;
 import com.app.MailService.Repository.ClientRepository;
 import com.app.MailService.Service.OtpCardService;
 import com.app.MailService.Utilities.AESHelper;
+import com.app.MailService.Utilities.Constants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +73,7 @@ public class AdminController {
     }
 
     @PostMapping("get-encrypted-content")
-    public ResponseEntity<?> getEncryptedContent(@RequestBody Map<String, String> content) {
+    public ResponseEntity<?> getEncryptedContent(@RequestBody Map<String, Object> content) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             String strContent = objectMapper.writeValueAsString(content);
@@ -94,12 +96,12 @@ public class AdminController {
 
     @PostMapping(BIND_CARD)
     public ResponseEntity<?> bindCard(@RequestParam Long userId, @RequestParam String cardSerial) {
-        OtpCardProjection boundCard = otpCardService.bindCard(userId, cardSerial);
+        OtpCard boundCard = otpCardService.bindCard(userId, cardSerial);
         ApiResponse apiResponse = new ApiResponse();
         apiResponse.setStatus(HttpStatus.OK.value());
         apiResponse.setMessage("Successfully bound card to the user");
         apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
-        apiResponse.setData(boundCard);
+        apiResponse.setData(null);
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
@@ -126,5 +128,44 @@ public class AdminController {
         apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
         apiResponse.setData(result);
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @PutMapping(LOCK_CARD)
+    public ResponseEntity<?> lockCard(@RequestParam Long cardId) {
+        boolean result = otpCardService.changeCardStatus(cardId, Constants.OTP_CARD_STATUS_LOCKED);
+        if (result) {
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setStatus(HttpStatus.OK.value());
+            apiResponse.setMessage("Card locked successfully");
+            apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
+            apiResponse.setData(null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        } else return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @PutMapping(UNLOCK_CARD)
+    public ResponseEntity<?> unlockCard(@RequestParam Long cardId) {
+        boolean result = otpCardService.changeCardStatus(cardId, Constants.OTP_CARD_STATUS_ACTIVE);
+        if (result) {
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setStatus(HttpStatus.OK.value());
+            apiResponse.setMessage("Card unlocked successfully");
+            apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
+            apiResponse.setData(null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        } else return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @PutMapping(DEACTIVATE_CARD)
+    public ResponseEntity<?> deactivateCard(@RequestParam Long cardId) {
+        boolean result = otpCardService.changeCardStatus(cardId, Constants.OTP_CARD_STATUS_DEACTIVATED);
+        if (result) {
+            ApiResponse apiResponse = new ApiResponse();
+            apiResponse.setStatus(HttpStatus.OK.value());
+            apiResponse.setMessage("Deactivate card successfully");
+            apiResponse.setTimestamp(String.valueOf(new Timestamp(System.currentTimeMillis())));
+            apiResponse.setData(null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        } else return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -3,7 +3,8 @@ package com.app.MailService.Service;
 import com.app.MailService.Entity.EmailTemplate;
 import com.app.MailService.Entity.OtpCard;
 import com.app.MailService.Entity.OtpCardToken;
-import com.app.MailService.Model.DTO.UserCardInfo;
+import com.app.MailService.Model.DTO.SendMailDTO;
+import com.app.MailService.Model.DTO.UserGenerateCardInfo;
 import com.app.MailService.Model.Projection.OtpCardProjection;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.Repository.EmailTemplateRepository;
@@ -70,34 +71,38 @@ public class OtpCardService {
         return generated;
     }
 
-    public boolean userCreateOtpCard(UserCardInfo userCardInfo) {
+    public boolean userCreateOtpCard(UserGenerateCardInfo userGenerateCardInfo) {
+        if (otpCardRepository.existsByUserIdAndStatus(userGenerateCardInfo.getUserId(), Constants.OTP_CARD_STATUS_ACTIVE)) {
+            log.error("User {} already has an active OTP card", userGenerateCardInfo.getUserId());
+            throw new RuntimeException("User already has an active OTP card");
+        }
         OtpCard otpCard = createSingleOtpCard(false);
-        otpCard = bindCardToUser(userCardInfo, otpCard);
-        String html = generateOtpCardFileHtmlText(userCardInfo, otpCard);
+        otpCard = bindCardToUser(userGenerateCardInfo, otpCard);
+        String html = generateOtpCardFileHtmlText(userGenerateCardInfo, otpCard);
 
         byte[] pdfBytes;
         try {
-            pdfBytes = pdfService.createPdfFromHtml(html, userCardInfo.getUserProvidedPassword());
+            pdfBytes = pdfService.createPdfFromHtml(html, userGenerateCardInfo.getUserProvidedPassword());
         } catch (Exception e) {
             log.error("Error while generating PDF: {}", e.getMessage());
             throw new RuntimeException(e);
         }
 
-        handleUploadToS3AndSendEmail(userCardInfo, pdfBytes);
+        handleUploadToS3AndSendEmail(userGenerateCardInfo, pdfBytes);
         return true;
     }
 
     @Async
-    protected void handleUploadToS3AndSendEmail(UserCardInfo userCardInfo, byte[] pdfBytes) {
-        String fileName = userCardInfo.getUserName() + "_" + UUID.randomUUID() + ".pdf";
+    protected void handleUploadToS3AndSendEmail(UserGenerateCardInfo userGenerateCardInfo, byte[] pdfBytes) {
+        String fileName = userGenerateCardInfo.getUserName() + "_" + UUID.randomUUID() + ".pdf";
         String url = s3Service.uploadFile(fileName, pdfBytes);
-        sendOtpCardByEmail(userCardInfo.getUserEmail(), userCardInfo.getUserName(), url);
+        sendOtpCardByEmail(userGenerateCardInfo.getUserEmail(), userGenerateCardInfo.getUserName(), url);
     }
 
-    private String generateOtpCardFileHtmlText(UserCardInfo userCardInfo, OtpCard otpCard) {
+    private String generateOtpCardFileHtmlText(UserGenerateCardInfo userGenerateCardInfo, OtpCard otpCard) {
         log.info("Generating OTP card file: {}", otpCard.getCardSerial());
         Map<String, String> fillData = new HashMap<>();
-        fillData.put("userName", userCardInfo.getUserName());
+        fillData.put("userName", userGenerateCardInfo.getUserName());
         fillData.put("cardSerial", otpCard.getCardSerial());
         otpCard.getOtpCardTokens().forEach(otpCardToken -> {
             String pos = "pos" + otpCardToken.getPosition();
@@ -113,9 +118,9 @@ public class OtpCardService {
         return pdfTemplate.fillTemplate(fillData);
     }
 
-    private OtpCard bindCardToUser(UserCardInfo userCardInfo, OtpCard otpCard) {
-        log.info("Binding card {} to user: {}", otpCard.getCardSerial(), userCardInfo.getUserId());
-        otpCard.setUserId(userCardInfo.getUserId());
+    private OtpCard bindCardToUser(UserGenerateCardInfo userGenerateCardInfo, OtpCard otpCard) {
+        log.info("Binding card {} to user: {}", otpCard.getCardSerial(), userGenerateCardInfo.getUserId());
+        otpCard.setUserId(userGenerateCardInfo.getUserId());
         Timestamp now = new Timestamp(System.currentTimeMillis());
         otpCard.setIssueAt(now);
         Timestamp endOfTheExpiringDay = Timestamp.valueOf(now.toLocalDateTime().plusDays(expirationTimeInDays).with(LocalTime.MAX));
@@ -201,19 +206,20 @@ public class OtpCardService {
                 content.put("clientId", "admin");
             }
 
-            content.put("fromAddress", Constants.OTP_CARD_SEND_EMAIL_FROM_ADDRESS);
-            content.put("senderName", Constants.OTP_CARD_SEND_EMAIL_SENDER_NAME);
-            content.put("toAddress", userEmail);
-            content.put("subject", Constants.OTP_CARD_EMAIL_SUBJECT);
-            content.put("emailTemplate", Constants.OTP_CARD_EMAIL_TEMPLATE);
+            SendMailDTO sendMailDTO = new SendMailDTO();
+            sendMailDTO.setFromAddress(Constants.OTP_CARD_SEND_EMAIL_FROM_ADDRESS);
+            sendMailDTO.setSenderName(Constants.OTP_CARD_SEND_EMAIL_SENDER_NAME);
+            sendMailDTO.setToAddress(userEmail);
+            sendMailDTO.setSubject(Constants.OTP_CARD_EMAIL_SUBJECT);
+            sendMailDTO.setEmailTemplate(Constants.OTP_CARD_EMAIL_TEMPLATE);
 
             Map<String, String> data = new HashMap<>();
             data.put("userName", userName);
             data.put("downloadLink", pdfUrl);
-            String strData = objectMapper.writeValueAsString(data);
-            content.put("data", strData);
 
-            String strContent = objectMapper.writeValueAsString(content);
+            sendMailDTO.setData(data);
+
+            String strContent = objectMapper.writeValueAsString(sendMailDTO);
             EmailMessageRequest request = new EmailMessageRequest(Constants.OTP_CARD_QUEUE_ROUTING_KEY, strContent, false);
             this.sendMailService.enQueue(request);
         } catch (Exception e) {
@@ -243,5 +249,23 @@ public class OtpCardService {
     public Page<OtpCardProjection> findUserOtpCards(Pageable pageable, Long userId, String status) {
         if (status == null) return otpCardRepository.findAllByUserId(userId, pageable);
         else return otpCardRepository.findAllByUserIdAndStatus(userId, status, pageable);
+    }
+
+    public boolean changeCardStatus(Long id, String status) {
+        OtpCard otpCard = otpCardRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Card not found"));
+
+        if (otpCard.getStatus().equals(Constants.OTP_CARD_STATUS_DEACTIVATED))
+            throw new RuntimeException("Cannot modify deactivated card");
+        if (otpCard.getStatus().equals(Constants.OTP_CARD_STATUS_AVAILABLE) && !status.equals(Constants.OTP_CARD_STATUS_DEACTIVATED))
+            throw new RuntimeException("Invalid status change request for available card");
+        if (status.equals(Constants.OTP_CARD_STATUS_LOCKED) && !Constants.OTP_CARD_STATUS_CHANGEABLE_FROM_LOCKED.contains(otpCard.getStatus()))
+            throw new RuntimeException("Invalid status change request for locked card");
+        if (status.equals(Constants.OTP_CARD_STATUS_ACTIVE) && !Constants.OTP_CARD_STATUS_CHANGEABLE_FROM_ACTIVE.contains(otpCard.getStatus()))
+            throw new RuntimeException("Invalid status change request for active card");
+
+        otpCard.setStatus(status);
+        otpCardRepository.save(otpCard);
+        return true;
     }
 }

@@ -72,8 +72,9 @@ public class Consumer {
 
             boolean result = sendMessage(queueMessage, htmlBody);
             if (result) {
-                queueMessage.setEmailSent(true);
+                queueMessage.setMessageSent(true);
                 queueMessageRepository.save(queueMessage);
+                log.info("Message sent successfully to: {}", queueMessage.getToAddress());
             }
         } catch (Exception e) {
             log.error("Error while processing message: {}", e.getMessage());
