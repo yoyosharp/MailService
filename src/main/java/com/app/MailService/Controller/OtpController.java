@@ -2,9 +2,11 @@ package com.app.MailService.Controller;
 
 import com.app.MailService.Entity.Otp;
 import com.app.MailService.Model.DTO.OtpResponseDTO;
+import com.app.MailService.Model.DTO.UserGenerateCardInfo;
 import com.app.MailService.Model.Request.GenerateOtpRequest;
 import com.app.MailService.Model.Request.VerifyOtpRequest;
 import com.app.MailService.Model.Response.ApiResponse;
+import com.app.MailService.Service.OtpCardService;
 import com.app.MailService.Service.OtpService;
 import com.app.MailService.Utilities.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +24,12 @@ import static com.app.MailService.Utilities.EndPointsConstants.*;
 public class OtpController {
 
     private final OtpService otpService;
+    private final OtpCardService otpCardService;
 
     @Autowired
-    public OtpController(OtpService otpService) {
+    public OtpController(OtpService otpService, OtpCardService otpCardService) {
         this.otpService = otpService;
+        this.otpCardService = otpCardService;
     }
 
     @PostMapping(GENERATE_OTP)
@@ -48,7 +52,7 @@ public class OtpController {
         response.setStatus(HttpStatus.OK.value());
         response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
         response.setMessage(message);
-        response.setResult(otpResponseDTO);
+        response.setData(otpResponseDTO);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -56,5 +60,19 @@ public class OtpController {
     public ResponseEntity<?> resendOtp(@RequestParam String trackingId) {
         Otp otp = otpService.resendOtp(trackingId);
         return generateOtpResponse(otp, "OTP resent successfully");
+    }
+
+    @PostMapping(CREATE_CARD)
+    public ResponseEntity<?> userCreateCard(@RequestBody UserGenerateCardInfo userGenerateCardInfo) {
+        boolean result = otpCardService.userCreateOtpCard(userGenerateCardInfo);
+        if (!result) {
+            ApiResponse response = new ApiResponse();
+            response.setStatus(HttpStatus.OK.value());
+            response.setTimestamp(new Timestamp(System.currentTimeMillis()).toString());
+            response.setMessage("Card created successfully");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

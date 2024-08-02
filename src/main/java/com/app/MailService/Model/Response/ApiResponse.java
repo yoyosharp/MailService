@@ -9,5 +9,5 @@ public class ApiResponse {
     private String timestamp;
     private Integer status;
     private String message;
-    private Object result;
+    private Object data;
 }

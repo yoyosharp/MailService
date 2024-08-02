@@ -55,6 +55,11 @@ public class Consumer {
         handle(message, Constants.FORGOT_PASSWORD_OTP_QUEUE);
     }
 
+    @RabbitListener(queues = Constants.OTP_CARD_QUEUE)
+    public void receiveOtpCardMessage(String message) {
+        handle(message, Constants.OTP_CARD_QUEUE);
+    }
+
     private void handle(String message, String queueName) {
         log.info("Received message from {}: {}", queueName, message);
         try {
@@ -67,8 +72,9 @@ public class Consumer {
 
             boolean result = sendMessage(queueMessage, htmlBody);
             if (result) {
-                queueMessage.setEmailSent(true);
+                queueMessage.setMessageSent(true);
                 queueMessageRepository.save(queueMessage);
+                log.info("Message sent successfully to: {}", queueMessage.getToAddress());
             }
         } catch (Exception e) {
             log.error("Error while processing message: {}", e.getMessage());

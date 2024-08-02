@@ -7,12 +7,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
-@RequestMapping("/demo")
-public class DemoController {
+@RequestMapping("/")
+public class HomeController {
 
     @GetMapping("/hello")
     public ResponseEntity<?> demo() {
         return new ResponseEntity<>("Hello World", HttpStatus.OK);
     }
+
 
 }

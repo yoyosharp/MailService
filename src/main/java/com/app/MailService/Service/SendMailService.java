@@ -1,11 +1,13 @@
 package com.app.MailService.Service;
 
 import com.app.MailService.Entity.QueueMessage;
+import com.app.MailService.Model.DTO.SendMailDTO;
 import com.app.MailService.Model.Request.EmailMessageRequest;
 import com.app.MailService.RabbitMQ.Publisher;
 import com.app.MailService.Repository.QueueMessageRepository;
 import com.app.MailService.Utilities.AESHelper;
 import com.app.MailService.Utilities.Constants;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -16,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 
-import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -43,10 +45,13 @@ public class SendMailService {
             throw new RuntimeException("Invalid request type");
         }
         try {
-            String content = request.isEncrypted() ? AESHelper.decrypt(request.getContent(), aesKey, aesIv) : request.getContent();
+            String content = request.isEncrypted() ?
+                    AESHelper.decrypt(request.getContent(), aesKey, aesIv) : request.getContent();
+
+            log.info("Enqueuing message: {}", content);
 
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> sendMailData = objectMapper.readValue(content, new TypeReference<>() {
+            SendMailDTO sendMailData = objectMapper.readValue(content, new TypeReference<>() {
             });
 
             QueueMessage queueMessage = generateQueueMessage(sendMailData);
@@ -62,17 +67,23 @@ public class SendMailService {
         }
     }
 
-    private QueueMessage generateQueueMessage(Map<String, String> data) {
+    private QueueMessage generateQueueMessage(SendMailDTO sendMailData) throws JsonProcessingException {
         QueueMessage queueMessage = new QueueMessage();
-        queueMessage.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
-        queueMessage.setClientId((String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
-        queueMessage.setFromAddress(data.get("fromAddress"));
-        queueMessage.setSenderName(data.get("senderName"));
-        queueMessage.setToAddress(data.get("toAddress"));
-        queueMessage.setSubject(data.get("subject"));
-        queueMessage.setEmailTemplate(data.get("emailTemplate"));
-        queueMessage.setData(data.get("data"));
-        queueMessage.setEmailSent(false);
+        try {
+            queueMessage.setTrackingId((String) RequestContextHolder.getRequestAttributes().getAttribute("trackingId", RequestAttributes.SCOPE_REQUEST));
+            queueMessage.setClientId((String) RequestContextHolder.getRequestAttributes().getAttribute("clientId", RequestAttributes.SCOPE_REQUEST));
+        } catch (NullPointerException e) {
+            queueMessage.setTrackingId(UUID.randomUUID().toString());
+            queueMessage.setClientId(null);
+        }
+
+        queueMessage.setFromAddress(sendMailData.getFromAddress());
+        queueMessage.setSenderName(sendMailData.getSenderName());
+        queueMessage.setToAddress(sendMailData.getToAddress());
+        queueMessage.setSubject(sendMailData.getSubject());
+        queueMessage.setEmailTemplate(sendMailData.getEmailTemplate());
+        queueMessage.setData(new ObjectMapper().writeValueAsString(sendMailData.getData()));
+        queueMessage.setMessageSent(false);
         return queueMessage;
     }
 }

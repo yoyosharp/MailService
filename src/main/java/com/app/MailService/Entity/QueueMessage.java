@@ -47,8 +47,8 @@ public class QueueMessage {
     @Column(name = "data")
     private String data;
 
-    @Column(name = "email_sent")
-    private boolean emailSent;
+    @Column(name = "message_sent")
+    private boolean messageSent;
 
     @CreatedDate
     @Column(name = "created_at")
